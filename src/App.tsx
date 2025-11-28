@@ -8,19 +8,15 @@ import Login from "./pages/Login";
 import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
 import StudentDetail from "./pages/StudentDetail";
-import PlaceholderPage from "./pages/Placeholder";
 import Payments from "./pages/Payments";
+import Plans from "./pages/Plans";
+import Menu from "./pages/Menu";
+import Announcements from "./pages/Announcements";
+import Complaints from "./pages/Complaints";
+import Reports from "./pages/Reports";
+import ActivityLog from "./pages/ActivityLog";
+import SettingsPage from "./pages/Settings";
 import NotFound from "./pages/NotFound";
-import {
-  CreditCard,
-  Tag,
-  UtensilsCrossed,
-  Megaphone,
-  MessageSquare,
-  BarChart3,
-  FileText,
-  Settings,
-} from "lucide-react";
 
 const queryClient = new QueryClient();
 
@@ -39,76 +35,13 @@ const App = () => (
             <Route path="/students" element={<Students />} />
             <Route path="/students/:id" element={<StudentDetail />} />
             <Route path="/payments" element={<Payments />} />
-            <Route
-              path="/plans"
-              element={
-                <PlaceholderPage
-                  title="Plans & Pricing"
-                  description="Configure mess plans and pricing"
-                  icon={Tag}
-                />
-              }
-            />
-            <Route
-              path="/menu"
-              element={
-                <PlaceholderPage
-                  title="Menu Management"
-                  description="Manage daily and weekly menu"
-                  icon={UtensilsCrossed}
-                />
-              }
-            />
-            <Route
-              path="/announcements"
-              element={
-                <PlaceholderPage
-                  title="Announcements & News"
-                  description="Create and manage announcements"
-                  icon={Megaphone}
-                />
-              }
-            />
-            <Route
-              path="/complaints"
-              element={
-                <PlaceholderPage
-                  title="Complaints & Feedback"
-                  description="Handle student complaints and feedback"
-                  icon={MessageSquare}
-                />
-              }
-            />
-            <Route
-              path="/reports"
-              element={
-                <PlaceholderPage
-                  title="Reports & Analytics"
-                  description="Generate and view reports"
-                  icon={BarChart3}
-                />
-              }
-            />
-            <Route
-              path="/activity"
-              element={
-                <PlaceholderPage
-                  title="Activity Log"
-                  description="View system activity and audit trail"
-                  icon={FileText}
-                />
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <PlaceholderPage
-                  title="Settings"
-                  description="Configure system settings"
-                  icon={Settings}
-                />
-              }
-            />
+            <Route path="/plans" element={<Plans />} />
+            <Route path="/menu" element={<Menu />} />
+            <Route path="/announcements" element={<Announcements />} />
+            <Route path="/complaints" element={<Complaints />} />
+            <Route path="/reports" element={<Reports />} />
+            <Route path="/activity" element={<ActivityLog />} />
+            <Route path="/settings" element={<SettingsPage />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />
