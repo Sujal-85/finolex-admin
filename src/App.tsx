@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import Students from "./pages/Students";
 import StudentDetail from "./pages/StudentDetail";
 import PlaceholderPage from "./pages/Placeholder";
+import Payments from "./pages/Payments";
 import NotFound from "./pages/NotFound";
 import {
   CreditCard,
@@ -37,16 +38,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/students" element={<Students />} />
             <Route path="/students/:id" element={<StudentDetail />} />
-            <Route
-              path="/payments"
-              element={
-                <PlaceholderPage
-                  title="Payments & Transactions"
-                  description="Manage payments and transaction records"
-                  icon={CreditCard}
-                />
-              }
-            />
+            <Route path="/payments" element={<Payments />} />
             <Route
               path="/plans"
               element={
