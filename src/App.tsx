@@ -21,7 +21,7 @@ import Announcements from "./pages/Announcements";
 import SettingsPage from "./pages/Settings";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-// import { ChatAssistant } from "./components/ChatAssistant";
+import { ChatAssistant } from "./components/ChatAssistant";
 
 const queryClient = new QueryClient();
 
@@ -69,7 +69,7 @@ const App = () => {
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
-          {/* <ChatAssistant /> */}
+          <ChatAssistant />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

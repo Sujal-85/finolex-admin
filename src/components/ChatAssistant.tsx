@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import api from '@/api/client';
+
 import { cn } from "@/lib/utils";
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
     id: string;
@@ -69,13 +71,13 @@ export function ChatAssistant() {
     };
 
     return (
-        <div className="fixed bottom-6 left-6 z-50 flex flex-col items-start gap-4">
+        <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-4">
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.8, y: 20, x: -20 }}
+                        initial={{ opacity: 0, scale: 0.8, y: 20, x: 20 }}
                         animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-                        exit={{ opacity: 0, scale: 0.8, y: 20, x: -20 }}
+                        exit={{ opacity: 0, scale: 0.8, y: 20, x: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className="w-[380px] h-[500px] bg-background border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
                     >
@@ -129,7 +131,11 @@ export function ChatAssistant() {
                                                 ? "bg-primary text-primary-foreground rounded-tr-none"
                                                 : "bg-white border rounded-tl-none"
                                         )}>
-                                            {msg.content}
+                                            <div className="prose prose-sm dark:prose-invert max-w-none [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4">
+                                                <ReactMarkdown>
+                                                    {msg.content}
+                                                </ReactMarkdown>
+                                            </div>
                                         </div>
                                     </motion.div>
                                 ))}
@@ -216,9 +222,9 @@ export function ChatAssistant() {
 
                 {/* Tooltip */}
                 {!isOpen && (
-                    <div className="absolute left-full ml-4 px-3 py-1.5 bg-foreground text-background text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                    <div className="absolute right-full mr-4 px-3 py-1.5 bg-foreground text-background text-xs font-medium rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
                         Ask AI Assistant
-                        <div className="absolute left-0 top-1/2 -translate-x-1 -translate-y-1/2 border-4 border-transparent border-r-foreground" />
+                        <div className="absolute right-0 top-1/2 translate-x-1 -translate-y-1/2 border-4 border-transparent border-l-foreground" />
                     </div>
                 )}
             </motion.button>
