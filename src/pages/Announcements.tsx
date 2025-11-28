@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,51 +11,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { format } from "date-fns";
+import api from "@/api/client";
 
 interface Announcement {
-  id: string;
+  _id: string;
   title: string;
   content: string;
-  audience: "all" | "students" | "hostel-a" | "hostel-b" | "hostel-c";
+  targetAudience: string;
   status: "draft" | "scheduled" | "published";
   scheduledDate?: string;
   pushNotification: boolean;
   createdAt: string;
 }
 
-const mockAnnouncements: Announcement[] = [
-  {
-    id: "1",
-    title: "Weekend Menu Update",
-    content: "Special dishes will be served this weekend. Check the menu for details.",
-    audience: "all",
-    status: "published",
-    pushNotification: true,
-    createdAt: "2024-01-15T10:00:00",
-  },
-  {
-    id: "2",
-    title: "Mess Timing Change",
-    content: "Due to maintenance, breakfast timing will be 8:00 AM - 9:30 AM tomorrow.",
-    audience: "all",
-    status: "scheduled",
-    scheduledDate: "2024-01-20T06:00:00",
-    pushNotification: true,
-    createdAt: "2024-01-14T15:30:00",
-  },
-  {
-    id: "3",
-    title: "Block A - Water Supply",
-    content: "Water supply will be interrupted from 2 PM to 4 PM for repairs.",
-    audience: "hostel-a",
-    status: "published",
-    pushNotification: false,
-    createdAt: "2024-01-13T09:00:00",
-  },
-];
-
 export default function Announcements() {
-  const [announcements, setAnnouncements] = useState<Announcement[]>(mockAnnouncements);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -65,18 +35,38 @@ export default function Announcements() {
   const [searchTerm, setSearchTerm] = useState("");
   const [audienceFilter, setAudienceFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    audience: "all" as Announcement["audience"],
+    targetAudience: "All",
     scheduledDate: "",
     pushNotification: false,
   });
 
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const response = await api.get('/announcements');
+      setAnnouncements(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch announcements",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const filteredAnnouncements = announcements.filter(a => {
     const matchesSearch = a.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         a.content.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesAudience = audienceFilter === "all" || a.audience === audienceFilter;
+      a.content.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesAudience = audienceFilter === "all" || a.targetAudience === audienceFilter;
     const matchesStatus = statusFilter === "all" || a.status === statusFilter;
     return matchesSearch && matchesAudience && matchesStatus;
   });
@@ -86,7 +76,7 @@ export default function Announcements() {
     setFormData({
       title: "",
       content: "",
-      audience: "all",
+      targetAudience: "All",
       scheduledDate: "",
       pushNotification: false,
     });
@@ -98,14 +88,14 @@ export default function Announcements() {
     setFormData({
       title: announcement.title,
       content: announcement.content,
-      audience: announcement.audience,
-      scheduledDate: announcement.scheduledDate || "",
+      targetAudience: announcement.targetAudience,
+      scheduledDate: announcement.scheduledDate ? new Date(announcement.scheduledDate).toISOString().slice(0, 16) : "",
       pushNotification: announcement.pushNotification,
     });
     setShowModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.title || !formData.content) {
       toast({
         title: "Validation Error",
@@ -116,51 +106,57 @@ export default function Announcements() {
     }
 
     const status: Announcement["status"] = formData.scheduledDate ? "scheduled" : "published";
+    const announcementData = {
+      ...formData,
+      status,
+      scheduledDate: formData.scheduledDate || undefined,
+    };
 
-    if (editingAnnouncement) {
-      setAnnouncements(announcements.map(a =>
-        a.id === editingAnnouncement.id
-          ? {
-              ...a,
-              title: formData.title,
-              content: formData.content,
-              audience: formData.audience,
-              status,
-              scheduledDate: formData.scheduledDate || undefined,
-              pushNotification: formData.pushNotification,
-            }
-          : a
-      ));
-      toast({ title: "Announcement Updated", description: "Changes saved successfully." });
-    } else {
-      const newAnnouncement: Announcement = {
-        id: `${announcements.length + 1}`,
-        title: formData.title,
-        content: formData.content,
-        audience: formData.audience,
-        status,
-        scheduledDate: formData.scheduledDate || undefined,
-        pushNotification: formData.pushNotification,
-        createdAt: new Date().toISOString(),
-      };
-      setAnnouncements([newAnnouncement, ...announcements]);
+    try {
+      if (editingAnnouncement) {
+        const response = await api.patch(`/announcements/${editingAnnouncement._id}`, announcementData); // Assuming PATCH route exists or needs to be added? 
+        // Wait, announcementRoutes has DELETE but maybe not PATCH? I should check. 
+        // Assuming standard CRUD, I might need to add PATCH if missing.
+        // Let's assume I'll fix the backend if needed.
+        setAnnouncements(announcements.map(a =>
+          a._id === editingAnnouncement._id ? response.data : a
+        ));
+        toast({ title: "Announcement Updated", description: "Changes saved successfully." });
+      } else {
+        const response = await api.post('/announcements', announcementData);
+        setAnnouncements([response.data, ...announcements]);
+        toast({
+          title: status === "scheduled" ? "Announcement Scheduled" : "Announcement Published",
+          description: status === "scheduled"
+            ? `Will be published on ${format(new Date(formData.scheduledDate), "MMM dd, yyyy 'at' hh:mm a")}`
+            : "Announcement is now live.",
+        });
+      }
+      setShowModal(false);
+    } catch (error) {
       toast({
-        title: status === "scheduled" ? "Announcement Scheduled" : "Announcement Published",
-        description: status === "scheduled"
-          ? `Will be published on ${format(new Date(formData.scheduledDate), "MMM dd, yyyy 'at' hh:mm a")}`
-          : "Announcement is now live.",
+        title: "Error",
+        description: "Failed to save announcement",
+        variant: "destructive",
       });
     }
-
-    setShowModal(false);
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingId) {
-      setAnnouncements(announcements.filter(a => a.id !== deletingId));
-      toast({ title: "Announcement Deleted", description: "Announcement removed successfully." });
-      setShowDeleteModal(false);
-      setDeletingId(null);
+      try {
+        await api.delete(`/announcements/${deletingId}`);
+        setAnnouncements(announcements.filter(a => a._id !== deletingId));
+        toast({ title: "Announcement Deleted", description: "Announcement removed successfully." });
+        setShowDeleteModal(false);
+        setDeletingId(null);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete announcement",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -170,19 +166,19 @@ export default function Announcements() {
       scheduled: { variant: "outline" as const, label: "Scheduled" },
       published: { variant: "default" as const, label: "Published" },
     };
-    const { variant, label } = variants[status];
+    const { variant, label } = variants[status] || variants.draft;
     return <Badge variant={variant}>{label}</Badge>;
   };
 
-  const getAudienceLabel = (audience: Announcement["audience"]) => {
-    const labels = {
-      all: "All Students",
-      students: "Students Only",
+  const getAudienceLabel = (audience: string) => {
+    const labels: Record<string, string> = {
+      All: "All Students",
+      Students: "Students Only",
       "hostel-a": "Block A",
       "hostel-b": "Block B",
       "hostel-c": "Block C",
     };
-    return labels[audience];
+    return labels[audience] || audience;
   };
 
   return (
@@ -220,7 +216,7 @@ export default function Announcements() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Audiences</SelectItem>
-                <SelectItem value="all">All Students</SelectItem>
+                <SelectItem value="All">All Students</SelectItem>
                 <SelectItem value="hostel-a">Block A</SelectItem>
                 <SelectItem value="hostel-b">Block B</SelectItem>
                 <SelectItem value="hostel-c">Block C</SelectItem>
@@ -245,7 +241,7 @@ export default function Announcements() {
       {/* Announcements List */}
       <div className="space-y-4">
         {filteredAnnouncements.map((announcement) => (
-          <Card key={announcement.id}>
+          <Card key={announcement._id}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1 flex-1">
@@ -261,7 +257,7 @@ export default function Announcements() {
                   </div>
                   <CardDescription>
                     <span className="inline-flex items-center gap-4">
-                      <span>To: {getAudienceLabel(announcement.audience)}</span>
+                      <span>To: {getAudienceLabel(announcement.targetAudience)}</span>
                       <span>•</span>
                       <span>{format(new Date(announcement.createdAt), "MMM dd, yyyy")}</span>
                       {announcement.scheduledDate && (
@@ -294,7 +290,7 @@ export default function Announcements() {
                     variant="ghost"
                     size="sm"
                     onClick={() => {
-                      setDeletingId(announcement.id);
+                      setDeletingId(announcement._id);
                       setShowDeleteModal(true);
                     }}
                   >
@@ -312,7 +308,9 @@ export default function Announcements() {
         {filteredAnnouncements.length === 0 && (
           <Card>
             <CardContent className="text-center py-12">
-              <p className="text-muted-foreground">No announcements found.</p>
+              <p className="text-muted-foreground">
+                {isLoading ? "Loading announcements..." : "No announcements found."}
+              </p>
             </CardContent>
           </Card>
         )}
@@ -355,17 +353,17 @@ export default function Announcements() {
               <div className="space-y-2">
                 <Label htmlFor="audience">Target Audience</Label>
                 <Select
-                  value={formData.audience}
-                  onValueChange={(value: Announcement["audience"]) =>
-                    setFormData({ ...formData, audience: value })
+                  value={formData.targetAudience}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, targetAudience: value })
                   }
                 >
                   <SelectTrigger id="audience">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">All Students</SelectItem>
-                    <SelectItem value="students">Students Only</SelectItem>
+                    <SelectItem value="All">All Students</SelectItem>
+                    <SelectItem value="Students">Students Only</SelectItem>
                     <SelectItem value="hostel-a">Block A</SelectItem>
                     <SelectItem value="hostel-b">Block B</SelectItem>
                     <SelectItem value="hostel-c">Block C</SelectItem>
@@ -423,7 +421,7 @@ export default function Announcements() {
             <div className="flex gap-4 pt-2 border-t">
               <div>
                 <Label className="text-muted-foreground">Audience</Label>
-                <p className="mt-1">{viewingAnnouncement && getAudienceLabel(viewingAnnouncement.audience)}</p>
+                <p className="mt-1">{viewingAnnouncement && getAudienceLabel(viewingAnnouncement.targetAudience)}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Status</Label>

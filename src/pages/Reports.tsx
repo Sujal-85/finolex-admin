@@ -1,52 +1,61 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, TrendingUp, Users, DollarSign, AlertCircle } from "lucide-react";
+import { Download, TrendingUp, Users, DollarSign, AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
-
-const revenueData = [
-  { month: "Jul", revenue: 145000 },
-  { month: "Aug", revenue: 152000 },
-  { month: "Sep", revenue: 168000 },
-  { month: "Oct", revenue: 175000 },
-  { month: "Nov", revenue: 182000 },
-  { month: "Dec", revenue: 189000 },
-  { month: "Jan", revenue: 195000 },
-];
-
-const planDistribution = [
-  { name: "Basic", value: 150, color: "#3b82f6" },
-  { name: "Standard", value: 320, color: "#10b981" },
-  { name: "Premium", value: 85, color: "#f59e0b" },
-];
-
-const complaintCategories = [
-  { category: "Food Quality", count: 25 },
-  { category: "Service", count: 18 },
-  { category: "Hygiene", count: 12 },
-  { category: "Other", count: 8 },
-];
-
-const monthlyEnrollment = [
-  { month: "Jul", students: 520 },
-  { month: "Aug", students: 535 },
-  { month: "Sep", students: 548 },
-  { month: "Oct", students: 555 },
-];
+import api from "@/api/client";
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState("last-30-days");
   const [reportType, setReportType] = useState("revenue");
+  const [loading, setLoading] = useState(true);
+  const [analyticsData, setAnalyticsData] = useState({
+    revenueData: [],
+    planDistribution: [],
+    complaintCategories: [],
+    monthlyEnrollment: []
+  });
+  const [summaryStats, setSummaryStats] = useState({
+    totalRevenue: 0,
+    activeStudents: 0,
+    pendingComplaints: 0
+  });
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [analyticsRes, summaryRes] = await Promise.all([
+          api.get('/stats/analytics'),
+          api.get('/stats')
+        ]);
+
+        setAnalyticsData(analyticsRes.data);
+        setSummaryStats(summaryRes.data);
+      } catch (error) {
+        console.error("Failed to fetch reports data:", error);
+        toast({
+          title: "Error",
+          description: "Failed to load analytics data.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
 
   const handleExport = (type: string) => {
     toast({
       title: "Export Started",
       description: `${type} report is being generated...`,
     });
-    
+
     setTimeout(() => {
       toast({
         title: "Export Complete",
@@ -54,6 +63,14 @@ export default function Reports() {
       });
     }, 1500);
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -107,7 +124,7 @@ export default function Reports() {
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">₹1.95L</p>
+                <p className="text-2xl font-bold">₹{summaryStats.totalRevenue.toLocaleString()}</p>
                 <p className="text-xs text-success">+7.2% from last month</p>
               </div>
             </div>
@@ -122,7 +139,7 @@ export default function Reports() {
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Active Students</p>
-                <p className="text-2xl font-bold">555</p>
+                <p className="text-2xl font-bold">{summaryStats.activeStudents}</p>
                 <p className="text-xs text-success">+1.3% from last month</p>
               </div>
             </div>
@@ -152,7 +169,7 @@ export default function Reports() {
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Open Complaints</p>
-                <p className="text-2xl font-bold">12</p>
+                <p className="text-2xl font-bold">{summaryStats.pendingComplaints}</p>
                 <p className="text-xs text-destructive">-2 from last week</p>
               </div>
             </div>
@@ -178,7 +195,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueData}>
+              <LineChart data={analyticsData.revenueData}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />
@@ -208,7 +225,7 @@ export default function Reports() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={planDistribution}
+                  data={analyticsData.planDistribution}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -217,7 +234,7 @@ export default function Reports() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {planDistribution.map((entry, index) => (
+                  {analyticsData.planDistribution.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>
@@ -243,7 +260,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={complaintCategories}>
+              <BarChart data={analyticsData.complaintCategories}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="category" />
                 <YAxis />
@@ -271,7 +288,7 @@ export default function Reports() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={monthlyEnrollment}>
+              <LineChart data={analyticsData.monthlyEnrollment}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="month" />
                 <YAxis />

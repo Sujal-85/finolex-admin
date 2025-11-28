@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,14 +9,15 @@ import { toast } from "@/hooks/use-toast";
 import { Upload, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import api from "@/api/client";
 
 export default function Settings() {
   const [generalSettings, setGeneralSettings] = useState({
-    collegeName: "XYZ College of Engineering",
-    canteenName: "Central Mess",
-    address: "123 College Road, City - 123456",
-    contactEmail: "mess@xyzcollege.edu",
-    contactPhone: "+91-1234567890",
+    collegeName: "",
+    canteenName: "",
+    address: "",
+    contactEmail: "",
+    contactPhone: "",
   });
 
   const [notificationSettings, setNotificationSettings] = useState({
@@ -34,33 +35,123 @@ export default function Settings() {
     language: "en",
   });
 
-  const handleSaveGeneral = () => {
-    toast({
-      title: "Settings Saved",
-      description: "General settings updated successfully.",
-    });
+  const [logoName, setLogoName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await api.get('/settings');
+      const data = response.data;
+
+      setGeneralSettings({
+        collegeName: data.collegeName || "",
+        canteenName: data.canteenName || "",
+        address: data.address || "",
+        contactEmail: data.contactEmail || "",
+        contactPhone: data.contactPhone || "",
+      });
+
+      if (data.notificationSettings) {
+        setNotificationSettings(data.notificationSettings);
+      }
+
+      setSystemSettings({
+        currency: data.currency || "INR",
+        timezone: data.timezone || "Asia/Kolkata",
+        dateFormat: data.dateFormat || "dd/MM/yyyy",
+        language: data.language || "en",
+      });
+
+      if (data.logoUrl) {
+        setLogoName(data.logoUrl);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSaveNotifications = () => {
-    toast({
-      title: "Settings Saved",
-      description: "Notification preferences updated successfully.",
-    });
+  const handleSaveGeneral = async () => {
+    try {
+      await api.patch('/settings', generalSettings);
+      toast({
+        title: "Settings Saved",
+        description: "General settings updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save general settings",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleSaveSystem = () => {
-    toast({
-      title: "Settings Saved",
-      description: "System settings updated successfully.",
-    });
+  const handleSaveNotifications = async () => {
+    try {
+      await api.patch('/settings', { notificationSettings });
+      toast({
+        title: "Settings Saved",
+        description: "Notification preferences updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save notification settings",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleLogoUpload = () => {
-    toast({
-      title: "Logo Uploaded",
-      description: "College logo updated successfully.",
-    });
+  const handleSaveSystem = async () => {
+    try {
+      await api.patch('/settings', systemSettings);
+      toast({
+        title: "Settings Saved",
+        description: "System settings updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save system settings",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleLogoUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setLogoName(file.name);
+      // Ideally upload the file here
+      toast({
+        title: "Logo Selected",
+        description: `${file.name} selected. Save general settings to apply.`,
+      });
+      // For now, we are not uploading, just simulating selection. 
+      // To persist, we might need to upload to a server. 
+      // Assuming we just save the name for now as a placeholder.
+      setGeneralSettings(prev => ({ ...prev, logoUrl: file.name } as any));
+    }
+  };
+
+  if (isLoading) {
+    return <div>Loading settings...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -149,10 +240,21 @@ export default function Settings() {
               <div className="space-y-2">
                 <Label>College Logo</Label>
                 <div className="flex items-center gap-4">
-                  <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-xs text-muted-foreground">Logo</span>
+                  <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                    {logoName ? (
+                      <span className="text-xs text-center px-1">{logoName}</span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Logo</span>
+                    )}
                   </div>
-                  <Button variant="outline" onClick={handleLogoUpload}>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                  />
+                  <Button variant="outline" onClick={handleLogoUploadClick}>
                     <Upload className="h-4 w-4 mr-2" />
                     Upload Logo
                   </Button>

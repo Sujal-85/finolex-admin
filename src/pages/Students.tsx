@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Filter, Download, UserPlus, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,101 +20,141 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useNavigate } from "react-router-dom";
+import api from "@/api/client";
+import { toast } from "sonner";
+import { AddStudentDialog } from "@/components/dashboard/AddStudentDialog";
 
-const mockStudents = [
-  {
-    id: "1",
-    name: "John Doe",
-    email: "john.doe@college.edu",
-    roll: "CS2021001",
-    department: "Computer Science",
-    year: "3rd",
-    hostel: "Block A",
-    messStatus: "active" as const,
-    outstanding: 0,
-  },
-  {
-    id: "2",
-    name: "Jane Smith",
-    email: "jane.smith@college.edu",
-    roll: "EE2021045",
-    department: "Electrical Engineering",
-    year: "3rd",
-    hostel: "Block B",
-    messStatus: "active" as const,
-    outstanding: 1500,
-  },
-  {
-    id: "3",
-    name: "Mike Johnson",
-    email: "mike.j@college.edu",
-    roll: "ME2021078",
-    department: "Mechanical Engineering",
-    year: "2nd",
-    hostel: "Block A",
-    messStatus: "inactive" as const,
-    outstanding: 0,
-  },
-  {
-    id: "4",
-    name: "Sarah Williams",
-    email: "sarah.w@college.edu",
-    roll: "CS2021023",
-    department: "Computer Science",
-    year: "3rd",
-    hostel: "Block C",
-    messStatus: "active" as const,
-    outstanding: 5000,
-  },
-  {
-    id: "5",
-    name: "David Brown",
-    email: "david.b@college.edu",
-    roll: "EE2021067",
-    department: "Electrical Engineering",
-    year: "2nd",
-    hostel: "Block B",
-    messStatus: "active" as const,
-    outstanding: 3500,
-  },
-];
+interface Student {
+  _id: string;
+  name: string;
+  email: string;
+  rollNumber: string;
+  department: string;
+  year: string;
+  hostel: string;
+  status: 'Active' | 'Inactive';
+  balance: number;
+}
 
 export default function Students() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [students, setStudents] = useState<Student[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
 
-  const filteredStudents = mockStudents.filter(
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const fetchStudents = async () => {
+    try {
+      const response = await api.get('/students');
+      setStudents(response.data);
+    } catch (error) {
+      toast.error("Failed to fetch students");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleExport = () => {
+    if (students.length === 0) {
+      toast.error("No students to export");
+      return;
+    }
+
+    const headers = ["Name", "Roll Number", "Email", "Department", "Year", "Hostel", "Status", "Balance"];
+    const csvContent = [
+      headers.join(","),
+      ...students.map(student => [
+        `"${student.name}"`,
+        student.rollNumber,
+        student.email,
+        student.department,
+        student.year,
+        student.hostel,
+        student.status,
+        student.balance
+      ].join(","))
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "students_export.csv");
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleEdit = (student: Student) => {
+    setSelectedStudent(student);
+    setIsDialogOpen(true);
+  };
+
+  const handleDeactivate = async (student: Student) => {
+    try {
+      await api.patch(`/students/${student._id}`, { status: 'Inactive' });
+      toast.success(`${student.name} has been deactivated`);
+      fetchStudents();
+    } catch (error) {
+      toast.error("Failed to deactivate student");
+    }
+  };
+
+  const handleReminder = (student: Student) => {
+    // Simulation for now
+    toast.success(`Reminder sent to ${student.email}`);
+  };
+
+  const handleAddStudent = () => {
+    setSelectedStudent(null);
+    setIsDialogOpen(true);
+  };
+
+  const filteredStudents = students.filter(
     (student) =>
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.roll.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Students</h1>
           <p className="text-muted-foreground">
             Manage student profiles and mess enrollment
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" className="gap-2" onClick={handleExport}>
             <Download className="h-4 w-4" />
             Export
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={handleAddStudent}>
             <UserPlus className="h-4 w-4" />
             Add Student
           </Button>
+          <AddStudentDialog
+            open={isDialogOpen}
+            onOpenChange={setIsDialogOpen}
+            onStudentAdded={fetchStudents}
+            studentToEdit={selectedStudent}
+          />
         </div>
       </div>
 
       <Card>
         <CardContent className="p-6">
-          <div className="mb-6 flex items-center gap-4">
-            <div className="relative flex-1">
+          <div className="mb-6 flex flex-col md:flex-row items-start md:items-center gap-4">
+            <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search by name, roll number, or email..."
@@ -129,7 +169,7 @@ export default function Students() {
             </Button>
           </div>
 
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -145,9 +185,9 @@ export default function Students() {
               <TableBody>
                 {filteredStudents.map((student) => (
                   <TableRow
-                    key={student.id}
+                    key={student._id}
                     className="cursor-pointer hover:bg-muted/50"
-                    onClick={() => navigate(`/students/${student.id}`)}
+                    onClick={() => navigate(`/students/${student._id}`)}
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -168,7 +208,7 @@ export default function Students() {
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {student.roll}
+                      {student.rollNumber}
                     </TableCell>
                     <TableCell>
                       <div>
@@ -180,12 +220,12 @@ export default function Students() {
                     </TableCell>
                     <TableCell>{student.hostel}</TableCell>
                     <TableCell>
-                      <StatusBadge status={student.messStatus} />
+                      <StatusBadge status={student.status === 'Active' ? 'active' : 'inactive'} />
                     </TableCell>
                     <TableCell className="text-right font-semibold">
-                      {student.outstanding > 0 ? (
+                      {student.balance > 0 ? (
                         <span className="text-danger">
-                          ₹{student.outstanding.toLocaleString()}
+                          ₹{student.balance.toLocaleString()}
                         </span>
                       ) : (
                         <span className="text-muted-foreground">—</span>
@@ -202,23 +242,32 @@ export default function Students() {
                           <DropdownMenuItem
                             onClick={(e) => {
                               e.stopPropagation();
-                              navigate(`/students/${student.id}`);
+                              navigate(`/students/${student._id}`);
                             }}
                           >
                             View Details
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(student);
+                            }}
                           >
                             Edit
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReminder(student);
+                            }}
                           >
                             Send Reminder
                           </DropdownMenuItem>
                           <DropdownMenuItem
-                            onClick={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeactivate(student);
+                            }}
                             className="text-danger"
                           >
                             Deactivate
@@ -234,7 +283,7 @@ export default function Students() {
 
           {filteredStudents.length === 0 && (
             <div className="py-12 text-center">
-              <p className="text-muted-foreground">No students found</p>
+              <p className="text-muted-foreground">{isLoading ? "Loading students..." : "No students found"}</p>
             </div>
           )}
         </CardContent>

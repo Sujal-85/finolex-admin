@@ -14,61 +14,79 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import api from "@/api/client";
+import { toast } from "sonner";
+import { AddStudentDialog } from "@/components/dashboard/AddStudentDialog";
 
-const mockStudent = {
-  id: "1",
-  name: "John Doe",
-  email: "john.doe@college.edu",
-  phone: "+91 98765 43210",
-  roll: "CS2021001",
-  department: "Computer Science",
-  year: "3rd",
-  hostel: "Block A",
-  room: "A-305",
-  messStatus: "active" as const,
-  enrollmentDate: "2021-08-01",
-  currentPlan: "Standard Plan",
-  planPrice: 5000,
-  outstanding: 0,
-};
-
-const mockTransactions = [
-  {
-    id: "TX001",
-    date: "2024-01-15",
-    amount: 5000,
-    mode: "UPI",
-    status: "paid" as const,
-  },
-  {
-    id: "TX002",
-    date: "2023-12-15",
-    amount: 5000,
-    mode: "Cash",
-    status: "paid" as const,
-  },
-  {
-    id: "TX003",
-    date: "2023-11-15",
-    amount: 5000,
-    mode: "Card",
-    status: "paid" as const,
-  },
-];
-
-const mockComplaints = [
-  {
-    id: "C001",
-    date: "2024-01-10",
-    title: "Menu variety request",
-    status: "resolved" as const,
-    priority: "low",
-  },
-];
+interface Student {
+  _id: string;
+  name: string;
+  email: string;
+  rollNumber: string;
+  department: string;
+  year: string;
+  hostel: string;
+  room?: string;
+  phone?: string;
+  status: 'Active' | 'Inactive';
+  balance: number;
+  currentPlan?: string;
+  createdAt: string;
+}
 
 export default function StudentDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [student, setStudent] = useState<Student | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+
+  const fetchStudent = async () => {
+    try {
+      const response = await api.get(`/students/${id}`);
+      setStudent(response.data);
+    } catch (error) {
+      toast.error("Failed to fetch student details");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (id) {
+      fetchStudent();
+    }
+  }, [id]);
+
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDeactivate = async () => {
+    if (!student) return;
+
+    // Simple confirmation
+    if (!window.confirm("Are you sure you want to deactivate this student?")) {
+      return;
+    }
+
+    try {
+      await api.patch(`/students/${student._id}`, { status: 'Inactive' });
+      toast.success("Student deactivated successfully");
+      fetchStudent(); // Refresh data
+    } catch (error) {
+      toast.error("Failed to deactivate student");
+    }
+  };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
+
+  if (!student) {
+    return <div>Student not found</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -87,11 +105,11 @@ export default function StudentDetail() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" onClick={handlePrint}>
             <Printer className="h-4 w-4" />
             Print Profile
           </Button>
-          <Button className="gap-2">
+          <Button className="gap-2" onClick={() => setIsEditOpen(true)}>
             <Edit className="h-4 w-4" />
             Edit
           </Button>
@@ -104,60 +122,69 @@ export default function StudentDetail() {
             <div className="flex flex-col items-center space-y-4">
               <Avatar className="h-24 w-24">
                 <AvatarFallback className="bg-primary text-2xl text-primary-foreground">
-                  {mockStudent.name
+                  {student.name
                     .split(" ")
                     .map((n) => n[0])
                     .join("")}
                 </AvatarFallback>
               </Avatar>
               <div className="text-center">
-                <h2 className="text-2xl font-bold">{mockStudent.name}</h2>
+                <h2 className="text-2xl font-bold">{student.name}</h2>
                 <p className="text-sm text-muted-foreground">
-                  {mockStudent.roll}
+                  {student.rollNumber}
                 </p>
               </div>
-              <StatusBadge status={mockStudent.messStatus} />
+              <StatusBadge status={student.status === 'Active' ? 'active' : 'inactive'} />
             </div>
 
             <div className="mt-6 space-y-4">
               <div className="flex items-center gap-3 text-sm">
                 <Mail className="h-4 w-4 text-muted-foreground" />
-                <span>{mockStudent.email}</span>
+                <span>{student.email}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <span>{mockStudent.phone}</span>
-              </div>
+              {student.phone && (
+                <div className="flex items-center gap-3 text-sm">
+                  <Phone className="h-4 w-4 text-muted-foreground" />
+                  <span>{student.phone}</span>
+                </div>
+              )}
             </div>
 
             <div className="mt-6 space-y-3 border-t pt-6">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Department</span>
-                <span className="font-medium">{mockStudent.department}</span>
+                <span className="font-medium">{student.department}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Year</span>
-                <span className="font-medium">{mockStudent.year}</span>
+                <span className="font-medium">{student.year}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Hostel</span>
-                <span className="font-medium">{mockStudent.hostel}</span>
+                <span className="font-medium">{student.hostel}</span>
               </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Room</span>
-                <span className="font-medium">{mockStudent.room}</span>
-              </div>
+              {student.room && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Room</span>
+                  <span className="font-medium">{student.room}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Enrolled</span>
                 <span className="font-medium">
-                  {new Date(mockStudent.enrollmentDate).toLocaleDateString()}
+                  {new Date(student.createdAt).toLocaleDateString()}
                 </span>
               </div>
             </div>
 
             <div className="mt-6 border-t pt-6">
-              <Button variant="outline" className="w-full">
-                Deactivate Account
+              <Button
+                variant="outline"
+                className="w-full text-danger hover:text-danger hover:bg-danger/10"
+                onClick={handleDeactivate}
+                disabled={student.status === 'Inactive'}
+              >
+                {student.status === 'Inactive' ? 'Account Deactivated' : 'Deactivate Account'}
               </Button>
             </div>
           </CardContent>
@@ -180,14 +207,14 @@ export default function StudentDetail() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-lg font-semibold">
-                        {mockStudent.currentPlan}
+                        {student.currentPlan || "No Plan Active"}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Monthly subscription
                       </p>
                     </div>
                     <p className="text-2xl font-bold">
-                      ₹{mockStudent.planPrice}
+                      ₹5,000
                     </p>
                   </div>
                 </CardContent>
@@ -200,16 +227,16 @@ export default function StudentDetail() {
                 <CardContent className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
-                      Total Paid (6 months)
+                      Total Paid (Lifetime)
                     </span>
-                    <span className="font-semibold">₹30,000</span>
+                    <span className="font-semibold">₹0</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">
                       Outstanding Amount
                     </span>
                     <span className="font-semibold text-success">
-                      ₹{mockStudent.outstanding}
+                      ₹{student.balance}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -221,103 +248,26 @@ export default function StudentDetail() {
             </TabsContent>
 
             <TabsContent value="payments">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Payment History</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Transaction ID</TableHead>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Amount</TableHead>
-                        <TableHead>Mode</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {mockTransactions.map((tx) => (
-                        <TableRow key={tx.id}>
-                          <TableCell className="font-mono text-sm">
-                            {tx.id}
-                          </TableCell>
-                          <TableCell>
-                            {new Date(tx.date).toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="font-semibold">
-                            ₹{tx.amount.toLocaleString()}
-                          </TableCell>
-                          <TableCell>{tx.mode}</TableCell>
-                          <TableCell>
-                            <StatusBadge status={tx.status} />
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              <div className="py-8 text-center text-muted-foreground">
+                No payment history available
+              </div>
             </TabsContent>
 
             <TabsContent value="complaints">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Complaints & Feedback</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {mockComplaints.length > 0 ? (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>ID</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Title</TableHead>
-                          <TableHead>Priority</TableHead>
-                          <TableHead>Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {mockComplaints.map((complaint) => (
-                          <TableRow key={complaint.id}>
-                            <TableCell className="font-mono text-sm">
-                              {complaint.id}
-                            </TableCell>
-                            <TableCell>
-                              {new Date(complaint.date).toLocaleDateString()}
-                            </TableCell>
-                            <TableCell>{complaint.title}</TableCell>
-                            <TableCell>
-                              <span
-                                className={`text-xs font-medium ${
-                                  complaint.priority === "high"
-                                    ? "text-danger"
-                                    : complaint.priority === "medium"
-                                    ? "text-warning"
-                                    : "text-muted-foreground"
-                                }`}
-                              >
-                                {complaint.priority.toUpperCase()}
-                              </span>
-                            </TableCell>
-                            <TableCell>
-                              <StatusBadge status={complaint.status} />
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  ) : (
-                    <div className="py-8 text-center text-muted-foreground">
-                      No complaints filed
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              <div className="py-8 text-center text-muted-foreground">
+                No complaints filed
+              </div>
             </TabsContent>
           </Tabs>
         </Card>
       </div>
+
+      <AddStudentDialog
+        open={isEditOpen}
+        setOpen={setIsEditOpen}
+        onStudentAdded={fetchStudent}
+        studentToEdit={student}
+      />
     </div>
   );
 }

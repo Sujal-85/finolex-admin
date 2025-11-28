@@ -30,24 +30,24 @@ const mockPlans: Plan[] = [
     active: true,
     subscriberCount: 150,
   },
-  {
-    id: "2",
-    name: "Standard Mess Plan",
-    type: "standard",
-    price: 5000,
-    features: ["Breakfast", "Lunch", "Dinner", "Evening Snacks", "Premium Menu", "Weekend Specials"],
-    active: true,
-    subscriberCount: 320,
-  },
-  {
-    id: "3",
-    name: "Premium Mess Plan",
-    type: "premium",
-    price: 6500,
-    features: ["All Meals", "Premium Menu", "Weekend Specials", "Guest Meal Allowance", "Special Diet Options"],
-    active: true,
-    subscriberCount: 85,
-  },
+  // {
+  //   id: "2",
+  //   name: "Standard Mess Plan",
+  //   type: "standard",
+  //   price: 5000,
+  //   features: ["Breakfast", "Lunch", "Dinner", "Evening Snacks", "Premium Menu", "Weekend Specials"],
+  //   active: true,
+  //   subscriberCount: 320,
+  // },
+  // {
+  //   id: "3",
+  //   name: "Premium Mess Plan",
+  //   type: "premium",
+  //   price: 6500,
+  //   features: ["All Meals", "Premium Menu", "Weekend Specials", "Guest Meal Allowance", "Special Diet Options"],
+  //   active: true,
+  //   subscriberCount: 85,
+  // },
 ];
 
 export default function Plans() {
