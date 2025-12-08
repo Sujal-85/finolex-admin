@@ -11,7 +11,9 @@ const complaintSchema = new mongoose.Schema({
     assignedTo: { type: String },
     internalNotes: [String],
     createdAt: { type: Date, default: Date.now },
-    resolvedAt: { type: Date }
+    resolvedAt: { type: Date },
+    image: { type: String },
+    images: [String]
 });
 
 module.exports = mongoose.model('Complaint', complaintSchema);

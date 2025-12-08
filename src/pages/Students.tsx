@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { Search, Filter, Download, UserPlus, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,23 +18,27 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { useNavigate } from "react-router-dom";
 import api from "@/api/client";
 import { toast } from "sonner";
 import { AddStudentDialog } from "@/components/dashboard/AddStudentDialog";
-
+import { Loader } from "@/components/ui/loader";
 interface Student {
   _id: string;
   name: string;
   email: string;
-  rollNumber: string;
-  department: string;
+  birthday?: string;
   year: string;
-  hostel: string;
+  hostelDetails: {
+    hostelName: string;
+    roomNo: string;
+  };
   status: 'Active' | 'Inactive';
   balance: number;
+  profileImage?: string;
+  generatedPassword?: string;
 }
 
 export default function Students() {
@@ -44,6 +49,7 @@ export default function Students() {
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [newlyCreatedPasswords, setNewlyCreatedPasswords] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchStudents();
@@ -66,16 +72,16 @@ export default function Students() {
       return;
     }
 
-    const headers = ["Name", "Roll Number", "Email", "Department", "Year", "Hostel", "Status", "Balance"];
+    const headers = ["Name", "Birthday", "Email", "Year", "Hostel", "Status", "Balance"];
     const csvContent = [
       headers.join(","),
       ...students.map(student => [
         `"${student.name}"`,
-        student.rollNumber,
+        `"${student.name}"`,
+        student.birthday ? format(new Date(student.birthday), "MMM dd, yyyy") : "-",
         student.email,
-        student.department,
         student.year,
-        student.hostel,
+        student.hostelDetails?.hostelName || '',
         student.status,
         student.balance
       ].join(","))
@@ -107,6 +113,19 @@ export default function Students() {
     }
   };
 
+  const handleDelete = async (student: Student) => {
+    if (!window.confirm(`Are you sure you want to delete ${student.name}? This action cannot be undone.`)) {
+      return;
+    }
+    try {
+      await api.delete(`/students/${student._id}`);
+      toast.success(`${student.name} has been deleted`);
+      fetchStudents();
+    } catch (error) {
+      toast.error("Failed to delete student");
+    }
+  };
+
   const handleReminder = (student: Student) => {
     // Simulation for now
     toast.success(`Reminder sent to ${student.email}`);
@@ -117,12 +136,34 @@ export default function Students() {
     setIsDialogOpen(true);
   };
 
+  const handleStudentAdded = async (newStudent?: any) => {
+    await fetchStudents();
+    if (newStudent && newStudent.generatedPassword) {
+      setNewlyCreatedPasswords(prev => ({
+        ...prev,
+        [newStudent._id]: newStudent.generatedPassword
+      }));
+      toast.success(`Student added. Password: ${newStudent.generatedPassword}`, {
+        duration: Infinity,
+        action: {
+          label: 'Copy',
+          onClick: () => navigator.clipboard.writeText(newStudent.generatedPassword)
+        }
+      });
+    }
+  };
+
   const filteredStudents = students.filter(
     (student) =>
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.rollNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
       student.email.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+
+
+  if (isLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="space-y-6">
@@ -145,7 +186,7 @@ export default function Students() {
           <AddStudentDialog
             open={isDialogOpen}
             onOpenChange={setIsDialogOpen}
-            onStudentAdded={fetchStudents}
+            onStudentAdded={handleStudentAdded}
             studentToEdit={selectedStudent}
           />
         </div>
@@ -157,7 +198,7 @@ export default function Students() {
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search by name, roll number, or email..."
+                placeholder="Search by name or email..."
                 className="pl-9"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -169,13 +210,14 @@ export default function Students() {
             </Button>
           </div>
 
-          <div className="rounded-md border overflow-x-auto">
+          <div className="rounded-md border overflow-auto custom-scrollbar max-h-[calc(100vh-250px)]">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
-                  <TableHead>Roll No.</TableHead>
-                  <TableHead>Department</TableHead>
+                  <TableHead>Birthday</TableHead>
+                  <TableHead>Password</TableHead>
+                  <TableHead>Year</TableHead>
                   <TableHead>Hostel</TableHead>
                   <TableHead>Mess Status</TableHead>
                   <TableHead className="text-right">Outstanding</TableHead>
@@ -192,6 +234,7 @@ export default function Students() {
                     <TableCell>
                       <div className="flex items-center gap-3">
                         <Avatar>
+                          <AvatarImage src={student.profileImage} alt={student.name} />
                           <AvatarFallback className="bg-primary-light text-primary">
                             {student.name
                               .split(" ")
@@ -208,17 +251,19 @@ export default function Students() {
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {student.rollNumber}
+                      {student.birthday ? format(new Date(student.birthday), "MMM dd, yyyy") : "-"}
+                    </TableCell>
+                    <TableCell className="font-mono text-sm text-blue-600 font-bold">
+                      {newlyCreatedPasswords[student._id] || student.generatedPassword || "-"}
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{student.department}</p>
                         <p className="text-sm text-muted-foreground">
                           {student.year} Year
                         </p>
                       </div>
                     </TableCell>
-                    <TableCell>{student.hostel}</TableCell>
+                    <TableCell>{student.hostelDetails?.hostelName}</TableCell>
                     <TableCell>
                       <StatusBadge status={student.status === 'Active' ? 'active' : 'inactive'} />
                     </TableCell>
@@ -271,6 +316,15 @@ export default function Students() {
                             className="text-danger"
                           >
                             Deactivate
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(student);
+                            }}
+                            className="text-danger"
+                          >
+                            Delete
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>

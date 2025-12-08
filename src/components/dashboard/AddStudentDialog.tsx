@@ -27,18 +27,21 @@ interface Student {
     _id: string;
     name: string;
     email: string;
-    rollNumber: string;
-    department: string;
+    birthday?: string;
     year: string;
-    hostel: string;
+    hostelDetails: {
+        hostelName: string;
+        roomNo: string;
+    };
     status: 'Active' | 'Inactive';
     balance: number;
+    profileImage?: string;
 }
 
 interface AddStudentDialogProps {
     open?: boolean;
     onOpenChange?: (open: boolean) => void;
-    onStudentAdded?: () => void;
+    onStudentAdded?: (student?: any) => void;
     studentToEdit?: Student | null;
 }
 
@@ -52,32 +55,40 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
 
     // Form state
     const [name, setName] = useState("");
-    const [rollNumber, setRollNumber] = useState("");
+    const [birthday, setBirthday] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
-    const [room, setRoom] = useState("");
-    const [plan, setPlan] = useState("Basic Plan");
+    const [roomNo, setRoomNo] = useState("");
+    const [hostelName, setHostelName] = useState("");
+    const [plan, setPlan] = useState("Basic Mess Plan");
+    const [profileImage, setProfileImage] = useState("");
 
     useEffect(() => {
         if (studentToEdit) {
             setName(studentToEdit.name);
-            setRollNumber(studentToEdit.rollNumber);
+            // @ts-ignore
+            setBirthday(studentToEdit.birthday ? new Date(studentToEdit.birthday).toISOString().split('T')[0] : "");
             setEmail(studentToEdit.email);
             // @ts-ignore
             setPhone(studentToEdit.phone || "");
             // @ts-ignore
-            setRoom(studentToEdit.room || "");
+            setRoomNo(studentToEdit.hostelDetails?.roomNo || "");
             // @ts-ignore
-            setPlan(studentToEdit.currentPlan || "Basic Plan");
+            setHostelName(studentToEdit.hostelDetails?.hostelName || "");
+            // @ts-ignore
+            setPlan(studentToEdit.currentPlan || "Basic Mess Plan");
+            setProfileImage(studentToEdit.profileImage || "");
         } else {
             // Reset form when not editing
             if (!open) {
                 setName("");
-                setRollNumber("");
+                setBirthday("");
                 setEmail("");
                 setPhone("");
-                setRoom("");
-                setPlan("Basic Plan");
+                setRoomNo("");
+                setHostelName("");
+                setPlan("Basic Mess Plan");
+                setProfileImage("");
             }
         }
     }, [studentToEdit, open]);
@@ -88,16 +99,18 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
 
         const studentData = {
             name,
-            rollNumber,
+            birthday,
             email,
             phone,
-            department: 'Computer Science', // Defaulting for now
-            year: 'First', // Defaulting for now
-            hostel: 'Boys Hostel 1', // Defaulting for now
-            room,
+            year: 'First',
+            hostelDetails: {
+                hostelName: hostelName || 'Boys Hostel 1',
+                roomNo
+            },
             currentPlan: plan,
             status: 'Active',
-            balance: 0
+            balance: 0,
+            profileImage
         };
 
         console.log("Sending student data:", studentData);
@@ -106,12 +119,13 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
             if (studentToEdit) {
                 await api.patch(`/students/${studentToEdit._id}`, studentData);
                 toast.success("Student updated successfully!");
+                onStudentAdded?.();
             } else {
-                await api.post('/students', studentData);
+                const response = await api.post('/students', studentData);
                 toast.success("Student added successfully!");
+                onStudentAdded?.(response.data);
             }
             setOpen?.(false);
-            onStudentAdded?.();
         } catch (error: any) {
             console.error("Failed to save student", error);
             const errorMessage = error.response?.data?.message ||
@@ -157,15 +171,15 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="roll" className="text-right">
-                                Roll No
+                            <Label htmlFor="birthday" className="text-right">
+                                Birthday
                             </Label>
                             <Input
-                                id="roll"
-                                name="roll"
-                                value={rollNumber}
-                                onChange={(e) => setRollNumber(e.target.value)}
-                                placeholder="CS2024001"
+                                id="birthday"
+                                name="birthday"
+                                type="date"
+                                value={birthday}
+                                onChange={(e) => setBirthday(e.target.value)}
                                 className="col-span-3"
                                 required
                             />
@@ -205,9 +219,22 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                             <Input
                                 id="room"
                                 name="room"
-                                value={room}
-                                onChange={(e) => setRoom(e.target.value)}
+                                value={roomNo}
+                                onChange={(e) => setRoomNo(e.target.value)}
                                 placeholder="A-101"
+                                className="col-span-3"
+                            />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="hostelName" className="text-right">
+                                Hostel
+                            </Label>
+                            <Input
+                                id="hostelName"
+                                name="hostelName"
+                                value={hostelName}
+                                onChange={(e) => setHostelName(e.target.value)}
+                                placeholder="Boys Hostel 1"
                                 className="col-span-3"
                             />
                         </div>
@@ -220,11 +247,24 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                                     <SelectValue placeholder="Select a plan" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="Basic Plan">Basic Plan</SelectItem>
-                                    <SelectItem value="Standard Plan">Standard Plan</SelectItem>
-                                    <SelectItem value="Premium Plan">Premium Plan</SelectItem>
+                                    <SelectItem value="Basic Mess Plan">Basic Mess Plan</SelectItem>
+                                    <SelectItem value="Standard Mess Plan">Standard Mess Plan</SelectItem>
+                                    <SelectItem value="Premium Mess Plan">Premium Mess Plan</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="profilePicture" className="text-right">
+                                Profile URL
+                            </Label>
+                            <Input
+                                id="profileImage"
+                                name="profileImage"
+                                value={profileImage}
+                                onChange={(e) => setProfileImage(e.target.value)}
+                                placeholder="https://example.com/avatar.png"
+                                className="col-span-3"
+                            />
                         </div>
                     </div>
                     <DialogFooter>

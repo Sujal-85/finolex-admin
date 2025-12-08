@@ -10,6 +10,7 @@ import { Plus, Edit, Trash2, Star, Check, ChevronLeft, ChevronRight } from "luci
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
 
 interface MenuItem {
   _id: string;
@@ -50,6 +51,7 @@ export default function Menu() {
     price: 0,
     category: "General"
   });
+  const [isLoading, setIsLoading] = useState(true); // Add isLoading state
 
   useEffect(() => {
     fetchMenu();
@@ -84,8 +86,16 @@ export default function Menu() {
         description: "Failed to fetch menu items",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
+
+
+
+  if (isLoading) {
+    return <Loader />;
+  }
 
   const dayIndex = daysOfWeek.indexOf(selectedDay);
   const currentDayMenu = weekMenu[selectedDay] || { breakfast: [], lunch: [], dinner: [] };

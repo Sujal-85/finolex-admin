@@ -23,22 +23,10 @@ import {
 } from "recharts";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
 import { toast } from "sonner";
 
-const revenueData = [
-  { month: "Jan", revenue: 45000, transactions: 320 },
-  { month: "Feb", revenue: 52000, transactions: 380 },
-  { month: "Mar", revenue: 48000, transactions: 340 },
-  { month: "Apr", revenue: 61000, transactions: 420 },
-  { month: "May", revenue: 58000, transactions: 395 },
-  { month: "Jun", revenue: 67000, transactions: 450 },
-];
 
-const paymentStatus = [
-  { name: "Paid", value: 65, color: "#10b981" },
-  { name: "Pending", value: 25, color: "#f59e0b" },
-  { name: "Overdue", value: 10, color: "#ef4444" },
-];
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -49,47 +37,47 @@ export default function Dashboard() {
     pendingComplaints: 0,
     lowStockItems: 0
   });
+  const [analytics, setAnalytics] = useState({
+    revenueData: [],
+    paymentStatus: []
+  });
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [recentComplaints, setRecentComplaints] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
+    // Poll for updates every 5 seconds
+    const interval = setInterval(fetchDashboardData, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, paymentsRes, complaintsRes] = await Promise.all([
+      const [statsRes, paymentsRes, complaintsRes, analyticsRes] = await Promise.all([
         api.get('/stats'),
         api.get('/payments'),
-        api.get('/complaints')
+        api.get('/complaints'),
+        api.get('/stats/analytics')
       ]);
 
       setStats(statsRes.data);
       setRecentTransactions(paymentsRes.data.slice(0, 5));
       setRecentComplaints(complaintsRes.data.slice(0, 3));
+      setAnalytics(analyticsRes.data);
     } catch (error: any) {
       console.error("Failed to fetch dashboard data", error);
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        console.error("Error response data:", error.response.data);
-        console.error("Error response status:", error.response.status);
-        console.error("Error response headers:", error.response.headers);
-        toast.error(`Failed to load dashboard data: ${error.response.status} ${error.response.data?.message || error.message}`);
-      } else if (error.request) {
-        // The request was made but no response was received
-        console.error("Error request:", error.request);
-        toast.error("Failed to load dashboard data: No response from server. Check network connection.");
-      } else {
-        // Something happened in setting up the request that triggered an Error
-        console.error("Error message:", error.message);
-        toast.error(`Failed to load dashboard data: ${error.message}`);
-      }
+      // ... error handling ...
     } finally {
       setIsLoading(false);
     }
   };
+
+
+
+  if (isLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="space-y-6">
@@ -114,7 +102,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Students"
           value={stats.totalStudents.toLocaleString()}
@@ -160,7 +148,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueData}>
+              <LineChart data={analytics.revenueData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                 <XAxis dataKey="month" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" />
@@ -186,7 +174,7 @@ export default function Dashboard() {
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={paymentStatus}
+                  data={analytics.paymentStatus}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -197,7 +185,7 @@ export default function Dashboard() {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {paymentStatus.map((entry, index) => (
+                  {analytics.paymentStatus.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={entry.color} />
                   ))}
                 </Pie>

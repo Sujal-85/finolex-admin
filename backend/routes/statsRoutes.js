@@ -3,6 +3,7 @@ const Student = require('../models/Student');
 const Payment = require('../models/Payment');
 const Complaint = require('../models/Complaint');
 const InventoryItem = require('../models/InventoryItem');
+const Plan = require('../models/Plan');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
@@ -15,15 +16,34 @@ router.get('/', auth, async (req, res) => {
         const payments = await Payment.find({ status: 'Completed' });
         const totalRevenue = payments.reduce((acc, curr) => acc + curr.amount, 0);
 
-        const pendingComplaints = await Complaint.countDocuments({ status: 'Pending' });
+        const pendingComplaints = await Complaint.countDocuments({ status: { $regex: /^Pending$/i } });
         const lowStockItems = await InventoryItem.countDocuments({ status: 'Low Stock' });
+
+        // Calculate Average Plan Value
+        const plans = await Plan.find();
+        const planPriceMap = {};
+        plans.forEach(p => planPriceMap[p.name] = p.price);
+
+        const allActiveStudents = await Student.find({ status: 'Active' });
+        let totalPlanValue = 0;
+        let studentsWithPlan = 0;
+
+        allActiveStudents.forEach(s => {
+            if (s.currentPlan && planPriceMap[s.currentPlan]) {
+                totalPlanValue += planPriceMap[s.currentPlan];
+                studentsWithPlan++;
+            }
+        });
+
+        const avgPlanValue = studentsWithPlan > 0 ? Math.round(totalPlanValue / studentsWithPlan) : 0;
 
         res.send({
             totalStudents,
             activeStudents,
             totalRevenue,
             pendingComplaints,
-            lowStockItems
+            lowStockItems,
+            avgPlanValue
         });
     } catch (error) {
         res.status(500).send(error);
@@ -126,7 +146,8 @@ router.get('/analytics', auth, async (req, res) => {
             revenueData: formattedRevenue,
             planDistribution: formattedPlanDist,
             complaintCategories: formattedComplaints,
-            monthlyEnrollment: formattedEnrollment
+            monthlyEnrollment: formattedEnrollment,
+            paymentStatus: await getPaymentStatusDistribution()
         });
 
     } catch (error) {
@@ -134,5 +155,28 @@ router.get('/analytics', auth, async (req, res) => {
         res.status(500).json({ error: "Failed to fetch analytics data" });
     }
 });
+
+async function getPaymentStatusDistribution() {
+    const statusData = await Payment.aggregate([
+        {
+            $group: {
+                _id: "$status",
+                value: { $sum: 1 }
+            }
+        }
+    ]);
+
+    const statusMap = {
+        'Completed': { name: 'Paid', color: '#10b981' },
+        'Pending': { name: 'Pending', color: '#f59e0b' },
+        'Failed': { name: 'Overdue', color: '#ef4444' }
+    };
+
+    return statusData.map(item => ({
+        name: statusMap[item._id]?.name || item._id,
+        value: item.value,
+        color: statusMap[item._id]?.color || '#6b7280'
+    }));
+}
 
 module.exports = router;

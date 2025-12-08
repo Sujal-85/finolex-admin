@@ -10,34 +10,66 @@ import { Upload, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
 
 export default function Settings() {
-  const [generalSettings, setGeneralSettings] = useState({
-    collegeName: "",
-    canteenName: "",
-    address: "",
-    contactEmail: "",
-    contactPhone: "",
-  });
+  // Helper to load from localStorage
+  const loadFromStorage = (key: string, defaultValue: any) => {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : defaultValue;
+  };
 
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    paymentReminders: true,
-    complaintAlerts: true,
-  });
+  const [generalSettings, setGeneralSettings] = useState(() =>
+    loadFromStorage('settings_general', {
+      collegeName: "",
+      canteenName: "",
+      address: "",
+      contactEmail: "",
+      contactPhone: "",
+    })
+  );
 
-  const [systemSettings, setSystemSettings] = useState({
-    currency: "INR",
-    timezone: "Asia/Kolkata",
-    dateFormat: "dd/MM/yyyy",
-    language: "en",
-  });
+  const [notificationSettings, setNotificationSettings] = useState(() =>
+    loadFromStorage('settings_notifications', {
+      emailNotifications: true,
+      smsNotifications: false,
+      pushNotifications: true,
+      paymentReminders: true,
+      complaintAlerts: true,
+    })
+  );
 
+  const [systemSettings, setSystemSettings] = useState(() =>
+    loadFromStorage('settings_system', {
+      currency: "INR",
+      timezone: "Asia/Kolkata",
+      dateFormat: "dd/MM/yyyy",
+      language: "en",
+    })
+  );
+
+  // const [logoName, setLogoName] = useState<string | null>(localStorage.getItem('settings_logoName'));
+  // Don't load from localStorage - fetch from server instead to avoid QuotaExceededError
   const [logoName, setLogoName] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Persist to localStorage whenever state changes
+  useEffect(() => {
+    // Exclude logoUrl from localStorage as it can be too large (Base64)
+    const { logoUrl, ...settingsToSave } = generalSettings as any;
+    localStorage.setItem('settings_general', JSON.stringify(settingsToSave));
+  }, [generalSettings]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_notifications', JSON.stringify(notificationSettings));
+  }, [notificationSettings]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_system', JSON.stringify(systemSettings));
+  }, [systemSettings]);
+
+  // Removed logoName localStorage useEffect to prevent crash
 
   useEffect(() => {
     fetchSettings();
@@ -136,21 +168,25 @@ export default function Settings() {
   const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setLogoName(file.name);
-      // Ideally upload the file here
-      toast({
-        title: "Logo Selected",
-        description: `${file.name} selected. Save general settings to apply.`,
-      });
-      // For now, we are not uploading, just simulating selection. 
-      // To persist, we might need to upload to a server. 
-      // Assuming we just save the name for now as a placeholder.
-      setGeneralSettings(prev => ({ ...prev, logoUrl: file.name } as any));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setLogoName(base64String); // Using logoName state to store the preview/base64 for now
+        setGeneralSettings(prev => ({ ...prev, logoUrl: base64String } as any));
+
+        toast({
+          title: "Logo Selected",
+          description: `${file.name} selected. Save general settings to apply.`,
+        });
+      };
+      reader.readAsDataURL(file);
     }
   };
 
+
+
   if (isLoading) {
-    return <div>Loading settings...</div>;
+    return <Loader />;
   }
 
   return (
@@ -240,11 +276,15 @@ export default function Settings() {
               <div className="space-y-2">
                 <Label>College Logo</Label>
                 <div className="flex items-center gap-4">
-                  <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="h-24 w-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden relative border">
                     {logoName ? (
-                      <span className="text-xs text-center px-1">{logoName}</span>
+                      <img
+                        src={logoName}
+                        alt="College Logo"
+                        className="h-full w-full object-contain"
+                      />
                     ) : (
-                      <span className="text-xs text-muted-foreground">Logo</span>
+                      <span className="text-xs text-muted-foreground">No Logo</span>
                     )}
                   </div>
                   <input

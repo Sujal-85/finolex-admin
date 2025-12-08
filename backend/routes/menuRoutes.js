@@ -1,5 +1,6 @@
 const express = require('express');
 const MenuItem = require('../models/MenuItem');
+const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
@@ -18,6 +19,14 @@ router.post('/', auth, async (req, res) => {
     try {
         const menuItem = new MenuItem(req.body);
         await menuItem.save();
+
+        // Create notification
+        await Notification.create({
+            title: 'Menu Item Added',
+            message: `${menuItem.name} added to ${menuItem.category} menu`,
+            type: 'menu'
+        });
+
         res.status(201).send(menuItem);
     } catch (error) {
         res.status(400).send(error);

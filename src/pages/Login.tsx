@@ -80,9 +80,10 @@ export default function Login() {
         <div className="absolute inset-0 bg-gradient-to-br from-white/40 to-white/10 rounded-3xl" />
 
         <CardHeader className="relative z-10 space-y-6 text-center pb-8 pt-10">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-2xl bg-white/40 backdrop-blur-md 
-                          shadow-2xl ring-2 ring-white/50 border border-white/40">
-            <UtensilsCrossed className="h-10 w-10 text-gray-900 drop-shadow-lg" />
+          <div className="mx-auto flex h-20 w-20 items-center justify-center">
+            {/* <UtensilsCrossed className="h-10 w-10 text-gray-900 drop-shadow-lg" />
+             */}
+            <img src="logo.png" alt="Logo" className="h-22 w-22 text-gray-900 drop-shadow-lg rounded-2xl"/>
           </div>
 
           <div className="space-y-2">

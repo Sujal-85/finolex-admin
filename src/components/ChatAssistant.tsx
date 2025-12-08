@@ -79,7 +79,7 @@ export function ChatAssistant() {
                         animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
                         exit={{ opacity: 0, scale: 0.8, y: 20, x: 20 }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="w-[380px] h-[500px] bg-background border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+                        className="w-[85vw] sm:w-[380px] h-[500px] bg-background border rounded-2xl shadow-2xl flex flex-col overflow-hidden"
                     >
                         {/* Header */}
                         <div className="p-4 bg-primary text-primary-foreground flex items-center justify-between">

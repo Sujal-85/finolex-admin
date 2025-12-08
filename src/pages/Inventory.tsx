@@ -30,6 +30,7 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, Search, Filter, Edit, Trash2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
 
 interface InventoryItem {
     _id: string;
@@ -140,6 +141,12 @@ export default function Inventory() {
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.category.toLowerCase().includes(searchQuery.toLowerCase())
     );
+
+
+
+    if (isLoading) {
+        return <Loader />;
+    }
 
     return (
         <div className="space-y-6">

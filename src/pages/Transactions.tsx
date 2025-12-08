@@ -1,0 +1,449 @@
+import { useState, useEffect } from "react";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, Download, Send, Check, X, Eye, Copy, Filter, Receipt, ExternalLink } from "lucide-react";
+import { StatsCard } from "@/components/shared/StatsCard";
+import { format } from "date-fns";
+import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
+
+interface Transaction {
+    _id: string;
+    studentName: string;
+    studentId: {
+        _id: string;
+        rollNumber: string;
+        hostel: string;
+    } | null;
+    amount: number;
+    type: string;
+    method: string; // UPI, Card, Cash, QR Code
+    date: string;
+    status: "Completed" | "Pending" | "Failed";
+    transactionId?: string;
+    receiptUrl?: string;
+}
+
+export default function Transactions() {
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [selectedIds, setSelectedIds] = useState<string[]>([]);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [methodFilter, setMethodFilter] = useState("all");
+    const [showReceiptModal, setShowReceiptModal] = useState(false);
+    const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        fetchTransactions();
+    }, []);
+
+    const fetchTransactions = async () => {
+        try {
+            const response = await api.get('/transactions');
+            console.log('Fetched transactions:', response.data);
+            console.log('First transaction receiptUrl:', response.data[0]?.receiptUrl);
+            setTransactions(response.data);
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to fetch transactions",
+                variant: "destructive",
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const totalTransactions = transactions.length;
+    const qrTransactions = transactions.filter(t => t.method === "QR Code").length;
+    const totalVolume = transactions.reduce((sum, t) => sum + t.amount, 0);
+
+    const filteredTransactions = transactions.filter(t => {
+        const matchesSearch = (t.studentName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (t.studentId?.rollNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (t._id || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (t.transactionId || "").toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+        const matchesMethod = methodFilter === "all" || t.method === methodFilter;
+
+        return matchesSearch && matchesStatus && matchesMethod;
+    });
+
+    const handleSelectAll = (checked: boolean) => {
+        if (checked) {
+            setSelectedIds(filteredTransactions.map(t => t._id));
+        } else {
+            setSelectedIds([]);
+        }
+    };
+
+    const handleSelectOne = (id: string, checked: boolean) => {
+        if (checked) {
+            setSelectedIds([...selectedIds, id]);
+        } else {
+            setSelectedIds(selectedIds.filter(sid => sid !== id));
+        }
+    };
+
+    const handleMarkAsPaid = async () => {
+        try {
+            await Promise.all(selectedIds.map(id => api.patch(`/transactions/${id}`, { status: 'Completed' })));
+
+            setTransactions(transactions.map(t =>
+                selectedIds.includes(t._id) ? { ...t, status: "Completed" as const } : t
+            ));
+            toast({
+                title: "Status Updated",
+                description: `${selectedIds.length} transaction(s) marked as completed.`,
+            });
+            setSelectedIds([]);
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to update transaction status",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleApprove = async (id: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        try {
+            await api.patch(`/transactions/${id}`, { status: 'Completed' });
+            setTransactions(transactions.map(t =>
+                t._id === id ? { ...t, status: "Completed" as const } : t
+            ));
+            toast({
+                title: "Approved",
+                description: "Transaction approved and payment recorded.",
+            });
+        } catch (error: any) {
+            console.error("Approval failed:", error);
+            toast({
+                title: "Approval Failed",
+                description: error.response?.data?.message || error.message || "Failed to sync payment record",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const generateReceipt = () => {
+        if (!selectedTransaction) return;
+
+        const doc = new jsPDF();
+
+        doc.setFontSize(20);
+        doc.text("Finolex Canteen Transaction", 105, 15, { align: "center" });
+
+        doc.setFontSize(12);
+        doc.text(`Transaction Ref: ${selectedTransaction._id}`, 14, 30);
+        doc.text(`Date: ${format(new Date(selectedTransaction.date), "MMM dd, yyyy HH:mm")}`, 14, 38);
+
+        autoTable(doc, {
+            startY: 45,
+            head: [['Field', 'Value']],
+            body: [
+                ['Student Name', selectedTransaction.studentName],
+                ['Roll Number', selectedTransaction.studentId?.rollNumber || "N/A"],
+                ['Method', selectedTransaction.method],
+                ['External TX ID', selectedTransaction.transactionId || "N/A"],
+                ['Amount', `Rs. ${selectedTransaction.amount}`],
+                ['Status', selectedTransaction.status],
+                ['Type', selectedTransaction.type],
+            ],
+        });
+
+        const finalY = (doc as any).lastAutoTable.finalY || 150;
+        doc.text("System Generated Record", 105, finalY + 20, { align: "center" });
+
+        doc.save(`Transaction-${selectedTransaction._id}.pdf`);
+        toast({ title: "Receipt Downloaded", description: "Transaction record downloaded." });
+        setShowReceiptModal(false);
+    };
+
+    const getStatusBadge = (status: Transaction["status"]) => {
+        const variants: Record<Transaction["status"], { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
+            Completed: { variant: "default", label: "Completed" },
+            Pending: { variant: "secondary", label: "Pending" },
+            Failed: { variant: "destructive", label: "Failed" },
+        };
+        const { variant, label } = variants[status] || variants.Pending;
+        return <Badge variant={variant}>{label}</Badge>;
+    };
+
+
+
+    if (isLoading) {
+        return <Loader />;
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">Transactions Log</h1>
+                    <p className="text-muted-foreground">View and audit all system transactions</p>
+                </div>
+            </div>
+
+            <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
+                <StatsCard
+                    title="Total Transactions"
+                    value={totalTransactions.toString()}
+                    icon={Receipt}
+                    change="All time"
+                    changeType="neutral"
+                />
+                <StatsCard
+                    title="QR Code Volume"
+                    value={qrTransactions.toString()}
+                    icon={Check}
+                    change={`Total ${qrTransactions}`}
+                    changeType="positive"
+                />
+                <StatsCard
+                    title="Total Volume"
+                    value={`₹${totalVolume.toLocaleString()}`}
+                    icon={Filter}
+                    change="All methods"
+                    changeType="neutral"
+                />
+            </div>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Transaction History</CardTitle>
+                    <CardDescription>Comprehensive log of all payments</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="flex flex-wrap gap-4">
+                        <div className="flex-1 min-w-[200px]">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                                <Input
+                                    placeholder="Search tx id, student, roll no..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="pl-9"
+                                />
+                            </div>
+                        </div>
+
+                        <Select value={statusFilter} onValueChange={setStatusFilter}>
+                            <SelectTrigger className="w-[150px]">
+                                <SelectValue placeholder="Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Status</SelectItem>
+                                <SelectItem value="Completed">Completed</SelectItem>
+                                <SelectItem value="Pending">Pending</SelectItem>
+                                <SelectItem value="Failed">Failed</SelectItem>
+                            </SelectContent>
+                        </Select>
+
+                        <Select value={methodFilter} onValueChange={setMethodFilter}>
+                            <SelectTrigger className="w-[150px]">
+                                <SelectValue placeholder="Method" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">All Methods</SelectItem>
+                                <SelectItem value="QR Code">QR Code</SelectItem>
+                                <SelectItem value="UPI">UPI</SelectItem>
+                                <SelectItem value="Card">Card</SelectItem>
+                                <SelectItem value="Cash">Cash</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+
+                    {/* Bulk Actions */}
+                    {selectedIds.length > 0 && (
+                        <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                            <span className="text-sm font-medium">{selectedIds.length} selected</span>
+                            <div className="flex gap-2 ml-auto">
+                                <Button size="sm" onClick={handleMarkAsPaid}>
+                                    <Check className="h-4 w-4 mr-2" />
+                                    Mark as Completed
+                                </Button>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="border rounded-lg max-h-[calc(100vh-300px)] overflow-auto custom-scrollbar">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-12">
+                                        <Checkbox
+                                            checked={selectedIds.length === filteredTransactions.length && filteredTransactions.length > 0}
+                                            onCheckedChange={handleSelectAll}
+                                        />
+                                    </TableHead>
+                                    <TableHead>Ref ID</TableHead>
+                                    <TableHead>Student</TableHead>
+                                    <TableHead>Amount</TableHead>
+                                    <TableHead>Method</TableHead>
+                                    <TableHead>Date</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredTransactions.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
+                                            {isLoading ? "Loading..." : "No transactions found."}
+                                        </TableCell>
+                                    </TableRow>
+                                ) : (
+                                    filteredTransactions.map((t) => (
+                                        <TableRow key={t._id}>
+                                            <TableCell>
+                                                <Checkbox
+                                                    checked={selectedIds.includes(t._id)}
+                                                    onCheckedChange={(checked) => handleSelectOne(t._id, checked as boolean)}
+                                                />
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs">{t._id.slice(-8)}...</TableCell>
+                                            <TableCell>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{t.studentName}</span>
+                                                    <span className="text-xs text-muted-foreground">{t.studentId?.rollNumber}</span>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>₹{t.amount}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline">{t.method}</Badge>
+                                            </TableCell>
+                                            <TableCell>{format(new Date(t.date), "MMM dd HH:mm")}</TableCell>
+                                            <TableCell>{getStatusBadge(t.status)}</TableCell>
+                                            <TableCell>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => {
+                                                        setSelectedTransaction(t);
+                                                        setShowReceiptModal(true);
+                                                    }}
+                                                >
+                                                    <Eye className="h-4 w-4 mr-1" />
+                                                    View
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+
+            <Dialog open={showReceiptModal} onOpenChange={setShowReceiptModal}>
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Transaction Details</DialogTitle>
+                        <DialogDescription>Full record of transaction</DialogDescription>
+                    </DialogHeader>
+                    {selectedTransaction && (
+                        <div className="space-y-4 py-4">
+                            {console.log('Selected transaction:', selectedTransaction)}
+                            {console.log('Receipt URL:', selectedTransaction.receiptUrl)}
+                            {console.log('Receipt exists?', !!selectedTransaction.receiptUrl)}
+
+                            {/* Receipt Action */}
+                            {selectedTransaction.receiptUrl && (
+                                <div className="bg-muted/30 border rounded-lg p-4 flex items-center justify-between">
+                                    <div className="space-y-1">
+                                        <span className="text-sm font-semibold block">Payment Receipt</span>
+                                        <p className="text-xs text-muted-foreground">View uploaded screenshot</p>
+                                    </div>
+                                    <Button
+                                        variant="outline"
+                                        className="gap-2"
+                                        onClick={() => window.open(selectedTransaction.receiptUrl, '_blank')}
+                                    >
+                                        <ExternalLink className="h-4 w-4" />
+                                        Open Image
+                                    </Button>
+                                </div>
+                            )}
+
+                            {/* Transaction Details */}
+                            <div className="border rounded-lg p-4 space-y-3 bg-muted/20">
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium">Student:</span>
+                                    <span className="text-sm font-semibold">{selectedTransaction.studentName || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium">Amount:</span>
+                                    <span className="text-sm font-bold text-green-600">₹{selectedTransaction.amount}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium">Method:</span>
+                                    <span className="text-sm">{selectedTransaction.method}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium">Status:</span>
+                                    {getStatusBadge(selectedTransaction.status)}
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium">Ref ID:</span>
+                                    <span className="text-sm font-mono text-xs">{selectedTransaction._id}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm font-medium">External ID:</span>
+                                    <span className="text-sm font-mono text-xs">{selectedTransaction.transactionId || "-"}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <div className="flex items-center gap-2 w-full">
+                            {selectedTransaction?.status === "Pending" && (
+                                <>
+                                    <Button
+                                        variant="default"
+                                        className="flex-1 bg-green-600 hover:bg-green-700"
+                                        onClick={(e) => {
+                                            handleApprove(selectedTransaction._id, e);
+                                            setShowReceiptModal(false);
+                                        }}
+                                    >
+                                        <Check className="h-4 w-4 mr-2" />
+                                        Approve Transaction
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        className="flex-1"
+                                        onClick={() => {
+                                            // Handle rejection
+                                            setShowReceiptModal(false);
+                                        }}
+                                    >
+                                        <X className="h-4 w-4 mr-2" />
+                                        Reject
+                                    </Button>
+                                </>
+                            )}
+                            {selectedTransaction?.status !== "Pending" && (
+                                <Button variant="outline" onClick={() => setShowReceiptModal(false)}>
+                                    Close
+                                </Button>
+                            )}
+                        </div>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div >
+    );
+}

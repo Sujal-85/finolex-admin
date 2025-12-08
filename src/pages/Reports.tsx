@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import * as htmlToImage from 'html-to-image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -7,6 +8,9 @@ import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
+import { generatePDFReport, generateMultiSectionReport, ReportSection } from "@/utils/pdfGenerator";
+import { generateBusinessInsights } from "@/utils/analyticsEngine";
 
 export default function Reports() {
   const [dateRange, setDateRange] = useState("last-30-days");
@@ -21,7 +25,8 @@ export default function Reports() {
   const [summaryStats, setSummaryStats] = useState({
     totalRevenue: 0,
     activeStudents: 0,
-    pendingComplaints: 0
+    pendingComplaints: 0,
+    avgPlanValue: 0
   });
 
   useEffect(() => {
@@ -50,26 +55,229 @@ export default function Reports() {
     fetchData();
   }, []);
 
-  const handleExport = (type: string) => {
+
+
+  const handleExport = async (type: string) => {
     toast({
       title: "Export Started",
-      description: `${type} report is being generated...`,
+      description: `Generating ${type} report...`,
     });
 
-    setTimeout(() => {
+    try {
+      let data: any[] = [];
+      let columns: string[] = [];
+      let fileName = `${type.replace(/\s+/g, '_')}_Report`;
+      let reportTitle = `${type} Report`;
+
+      switch (type) {
+        case "Payment Summary":
+        case "Revenue Report":
+          const paymentsRes = await api.get('/payments');
+          // Filter for revenue report if needed, or just dump all
+          const paymentList = type === "Revenue Report"
+            ? paymentsRes.data.filter((p: any) => p.status === 'Completed')
+            : paymentsRes.data;
+
+          columns = ["Date", "Student", "Amount", "Type", "Status"];
+          data = paymentList.map((p: any) => [
+            new Date(p.date).toLocaleDateString(),
+            p.studentName || p.studentId || "N/A", // Backend might not populate name, handle carefully
+            `Rs. ${p.amount}`,
+            p.type,
+            p.status
+          ]);
+          break;
+
+        case "Student Enrollment":
+          const studentsRes = await api.get('/students');
+          columns = ["Name", "Roll No", "Year", "Plan", "Balance", "Status"];
+          data = studentsRes.data.map((s: any) => [
+            s.name,
+            s.rollNo,
+            s.year,
+            s.currentPlan || "None",
+            `Rs. ${s.balance}`,
+            s.status
+          ]);
+          reportTitle = "Student Enrollment Report";
+          break;
+
+        case "Complaint Report":
+          const complaintsRes = await api.get('/complaints');
+          columns = ["Date", "Subject", "Student", "Status", "Description"];
+          data = complaintsRes.data.map((c: any) => [
+            new Date(c.createdAt).toLocaleDateString(),
+            c.subject,
+            c.studentName || "N/A",
+            c.status,
+            c.description.substring(0, 50) + (c.description.length > 50 ? "..." : "")
+          ]);
+          break;
+
+        case "Menu History":
+          const menuRes = await api.get('/menu');
+          columns = ["Item Name", "Category", "Price", "Available"];
+          data = menuRes.data.map((m: any) => [
+            m.name,
+            m.category,
+            `Rs. ${m.price}`,
+            m.available ? "Yes" : "No"
+          ]);
+          reportTitle = "Menu Items Report";
+          break;
+
+        case "Full Analytics":
+          // Generate Business Insights
+          const insights = generateBusinessInsights(analyticsData, summaryStats);
+
+          // Helper to capture chart
+          const captureChart = async (elementId: string) => {
+            const element = document.getElementById(elementId);
+            if (element) {
+              try {
+                // Use html-to-image for better support of modern CSS (variables, oklch etc)
+                const dataUrl = await htmlToImage.toPng(element, { backgroundColor: '#ffffff' });
+                return dataUrl;
+              } catch (error) {
+                console.error(`Failed to capture chart ${elementId}:`, error);
+                return null;
+              }
+            }
+            return null;
+          };
+
+          // Delay slightly to ensure rendering if needed, but normally await is enough
+          const revenueImg = await captureChart("revenue-chart");
+          const planImg = await captureChart("plan-chart");
+          const complaintImg = await captureChart("complaint-chart");
+          const enrollmentImg = await captureChart("enrollment-chart");
+
+          const reportSections: ReportSection[] = [
+            {
+              type: 'text',
+              title: 'Executive Summary',
+              content: [
+                `This comprehensive analytics report provides an overview of the canteen's performance for the selected period.`,
+                `Total Revenue: Rs. ${summaryStats.totalRevenue.toLocaleString()}`,
+                `Active Students: ${summaryStats.activeStudents}`,
+                `Pending Complaints: ${summaryStats.pendingComplaints}`
+              ]
+            },
+            {
+              type: 'text',
+              title: 'AI Business Recommendations',
+              content: insights
+            },
+            {
+              type: 'table',
+              title: 'Revenue Trends Data',
+              columns: ["Month", "Revenue"],
+              data: analyticsData.revenueData.map((d: any) => [d.month, `Rs. ${d.revenue}`])
+            }
+          ];
+
+          if (revenueImg) {
+            reportSections.splice(2, 0, { type: 'image', content: revenueImg, width: 180, height: 100 });
+          }
+
+          reportSections.push({
+            type: 'table',
+            title: 'Plan Distribution Data',
+            columns: ["Plan Name", "Active Users"],
+            data: analyticsData.planDistribution.map((d: any) => [d.name, d.value])
+          });
+
+          if (planImg) {
+            reportSections.push({ type: 'image', content: planImg, width: 180, height: 100 });
+          }
+
+          reportSections.push({
+            type: 'table',
+            title: 'Recent Complaints Breakdown',
+            columns: ["Category", "Count"],
+            data: analyticsData.complaintCategories.map((d: any) => [d.category, d.count])
+          });
+
+          if (complaintImg) {
+            reportSections.push({ type: 'image', content: complaintImg, width: 180, height: 100 });
+          }
+
+          if (enrollmentImg) {
+            reportSections.push({ type: 'image', title: 'Enrollment Trends', content: enrollmentImg, width: 180, height: 100 });
+          }
+
+          await generateMultiSectionReport("Full Analytics & Business Insights", reportSections, fileName);
+
+          toast({
+            title: "Export Complete",
+            description: `Full Analytics report generated successfully.`,
+            duration: 2000,
+          });
+          return; // Exit early as we use custom generator
+
+        case "Revenue":
+          columns = ["Month", "Revenue"];
+          data = analyticsData.revenueData.map((d: any) => [
+            d.month,
+            `Rs. ${d.revenue}`
+          ]);
+          reportTitle = "Revenue Trend Report";
+          break;
+
+        case "Plan Distribution":
+          columns = ["Plan Name", "Active Users"];
+          data = analyticsData.planDistribution.map((d: any) => [
+            d.name,
+            d.value
+          ]);
+          reportTitle = "Plan Distribution Report";
+          break;
+
+        case "Complaints":
+          columns = ["Category", "Count"];
+          data = analyticsData.complaintCategories.map((d: any) => [
+            d.category,
+            d.count
+          ]);
+          reportTitle = "Complaint Categories Report";
+          break;
+
+        case "Enrollment":
+          columns = ["Month", "New Students"];
+          data = analyticsData.monthlyEnrollment.map((d: any) => [
+            d.month,
+            d.students
+          ]);
+          reportTitle = "Monthly Enrollment Report";
+          break;
+
+        default:
+          toast({ title: "Info", description: "This report type is not yet supported for PDF." });
+          return;
+      }
+
+      await generatePDFReport(reportTitle, columns, data, fileName);
+
       toast({
         title: "Export Complete",
-        description: `${type} report downloaded successfully.`,
+        description: `${type} downloaded successfully.`,
+        duration: 2000,
       });
-    }, 1500);
+
+    } catch (error) {
+      console.error("Export failed", error);
+      toast({
+        title: "Export Failed",
+        description: "Could not fetch data for report generation.",
+        variant: "destructive",
+      });
+    }
   };
 
+
+
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
+    return <Loader />;
   }
 
   return (
@@ -154,7 +362,7 @@ export default function Reports() {
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Avg Plan Value</p>
-                <p className="text-2xl font-bold">₹4,890</p>
+                <p className="text-2xl font-bold">₹{summaryStats.avgPlanValue?.toLocaleString() || 0}</p>
                 <p className="text-xs text-success">+3.5% from last month</p>
               </div>
             </div>
@@ -180,7 +388,7 @@ export default function Reports() {
       {/* Charts */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Revenue Trend */}
-        <Card>
+        <Card id="revenue-chart">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -208,7 +416,7 @@ export default function Reports() {
         </Card>
 
         {/* Plan Distribution */}
-        <Card>
+        <Card id="plan-chart">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -245,7 +453,7 @@ export default function Reports() {
         </Card>
 
         {/* Complaint Categories */}
-        <Card>
+        <Card id="complaint-chart">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -273,7 +481,7 @@ export default function Reports() {
         </Card>
 
         {/* Student Enrollment */}
-        <Card>
+        <Card id="enrollment-chart">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -311,7 +519,7 @@ export default function Reports() {
           <div className="grid gap-3 md:grid-cols-3">
             <Button variant="outline" className="justify-start" onClick={() => handleExport("Payment Summary")}>
               <Download className="h-4 w-4 mr-2" />
-              Payment Summary (CSV)
+              Payment Summary (PDF)
             </Button>
             <Button variant="outline" className="justify-start" onClick={() => handleExport("Student Enrollment")}>
               <Download className="h-4 w-4 mr-2" />
@@ -319,7 +527,7 @@ export default function Reports() {
             </Button>
             <Button variant="outline" className="justify-start" onClick={() => handleExport("Complaint Report")}>
               <Download className="h-4 w-4 mr-2" />
-              Complaint Report (CSV)
+              Complaint Report (PDF)
             </Button>
             <Button variant="outline" className="justify-start" onClick={() => handleExport("Menu History")}>
               <Download className="h-4 w-4 mr-2" />
@@ -331,7 +539,7 @@ export default function Reports() {
             </Button>
             <Button variant="outline" className="justify-start" onClick={() => handleExport("Full Analytics")}>
               <Download className="h-4 w-4 mr-2" />
-              Full Analytics (XLSX)
+              Full Analytics (PDF)
             </Button>
           </div>
         </CardContent>

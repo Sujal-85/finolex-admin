@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format } from "date-fns";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
 
 interface Complaint {
   _id: string;
@@ -27,6 +28,12 @@ interface Complaint {
   createdAt: string;
   resolvedAt?: string;
   internalNotes: string[];
+  studentProfilePicture?: string;
+  studentRollNumber?: string;
+  studentHostel?: string;
+  studentHostel?: string;
+  studentRoom?: string;
+  image?: string;
 }
 
 export default function Complaints() {
@@ -39,9 +46,13 @@ export default function Complaints() {
   const [activeTab, setActiveTab] = useState("all");
   const [noteText, setNoteText] = useState("");
   const [assignTo, setAssignTo] = useState("");
+  const [isLoading, setIsLoading] = useState(true); // Add isLoading state
 
   useEffect(() => {
     fetchComplaints();
+    // Poll for updates every 5 seconds
+    const interval = setInterval(fetchComplaints, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchComplaints = async () => {
@@ -54,23 +65,31 @@ export default function Complaints() {
         description: "Failed to fetch complaints",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
+
+
+  if (isLoading) {
+    return <Loader />;
+  }
+
   const filteredComplaints = complaints.filter(c => {
-    const matchesSearch = c.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      c.subject.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (c.studentName || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (c.subject || "").toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || c.category === categoryFilter;
     const matchesPriority = priorityFilter === "all" || c.priority === priorityFilter;
-    const matchesTab = activeTab === "all" || c.status === activeTab;
+    const matchesTab = activeTab === "all" || (c.status && c.status.toLowerCase() === activeTab.toLowerCase());
 
     return matchesSearch && matchesCategory && matchesPriority && matchesTab;
   });
 
   const stats = {
-    open: complaints.filter(c => c.status === "Pending").length,
-    inProgress: complaints.filter(c => c.status === "In Progress").length,
-    resolved: complaints.filter(c => c.status === "Resolved").length,
+    open: complaints.filter(c => c.status && c.status.toLowerCase() === "pending").length,
+    inProgress: complaints.filter(c => c.status && c.status.toLowerCase() === "in progress").length,
+    resolved: complaints.filter(c => c.status && c.status.toLowerCase() === "resolved").length,
     avgResolutionTime: "2.5 days", // This would ideally be calculated from data
   };
 
@@ -85,7 +104,7 @@ export default function Complaints() {
       try {
         const updatedData = {
           status,
-          resolvedAt: status === "Resolved" ? new Date().toISOString() : selectedComplaint.resolvedAt
+          resolvedAt: status === "Resolved" ? new Date().toISOString() : null
         };
         await api.patch(`/complaints/${selectedComplaint._id}`, updatedData);
 
@@ -93,6 +112,9 @@ export default function Complaints() {
           c._id === selectedComplaint._id ? { ...c, ...updatedData } : c
         ));
         setSelectedComplaint({ ...selectedComplaint, ...updatedData });
+
+        // Refresh to ensure all stats are updated
+        fetchComplaints();
 
         toast({
           title: "Status Updated",
@@ -189,8 +211,8 @@ export default function Complaints() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Complaints & Feedback</h1>
-          <p className="text-muted-foreground">Handle student complaints and feedback</p>
+          <h1 className="text-3xl font-bold tracking-tight">Complaints</h1>
+          <p className="text-muted-foreground">Handle student complaints</p>
         </div>
       </div>
 
@@ -199,7 +221,7 @@ export default function Complaints() {
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Open</p>
+              <p className="text-sm font-medium text-muted-foreground">Pending</p>
               <p className="text-3xl font-bold text-destructive">{stats.open}</p>
             </div>
           </CardContent>
@@ -284,28 +306,36 @@ export default function Complaints() {
       </Card>
 
       {/* Complaints List */}
-      <div className="space-y-3">
+      <div className="space-y-3 max-h-[600px] overflow-y-auto pr-2 scrollbar-hide" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+        <style>
+          {`
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+          `}
+        </style>
         {filteredComplaints.map((complaint) => (
           <Card key={complaint._id} className="hover:bg-muted/50 transition-colors cursor-pointer" onClick={() => handleViewDetails(complaint)}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1 flex-1">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg">{complaint.subject}</CardTitle>
+                    <CardTitle className="text-lg">{complaint.subject || "No Subject"}</CardTitle>
                     {getPriorityBadge(complaint.priority)}
                     {getStatusBadge(complaint.status)}
                   </div>
                   <CardDescription className="flex items-center gap-4">
                     <span className="flex items-center gap-1">
                       <Avatar className="h-5 w-5">
+                        <AvatarImage src={complaint.studentProfilePicture} alt={complaint.studentName} />
                         <AvatarFallback className="text-xs">
-                          {complaint.studentName.split(" ").map(n => n[0]).join("")}
+                          {(complaint.studentName || "U").split(" ").map(n => n[0]).join("")}
                         </AvatarFallback>
                       </Avatar>
-                      {complaint.studentName}
+                      {complaint.studentName || "Unknown Student"}
                     </span>
                     <span>•</span>
-                    <span>{getCategoryLabel(complaint.category)}</span>
+                    <span>{getCategoryLabel(complaint.category || "other")}</span>
                     <span>•</span>
                     <span>{format(new Date(complaint.createdAt), "MMM dd, yyyy")}</span>
                   </CardDescription>
@@ -316,7 +346,16 @@ export default function Complaints() {
               </div>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground line-clamp-2">{complaint.description}</p>
+              <p className="text-sm text-muted-foreground line-clamp-2">{complaint.description || "No description available."}</p>
+              {complaint.image && (
+                <div className="mt-3">
+                  <img
+                    src={complaint.image}
+                    alt="Complaint attachment"
+                    className="rounded-md max-h-48 object-cover w-full"
+                  />
+                </div>
+              )}
               {complaint.assignedTo && (
                 <p className="text-xs text-muted-foreground mt-2">
                   Assigned to: {complaint.assignedTo}
@@ -340,7 +379,7 @@ export default function Complaints() {
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              {selectedComplaint?.subject}
+              {selectedComplaint?.subject || "No Subject"}
               {selectedComplaint && getPriorityBadge(selectedComplaint.priority)}
             </DialogTitle>
             <DialogDescription>
@@ -355,27 +394,19 @@ export default function Complaints() {
                 <Label className="text-muted-foreground">Student Details</Label>
                 <div className="flex items-center gap-3 p-3 bg-muted rounded-lg">
                   <Avatar>
+                    <AvatarImage src={selectedComplaint.studentProfilePicture} alt={selectedComplaint.studentName} />
                     <AvatarFallback>
-                      {selectedComplaint.studentName.split(" ").map(n => n[0]).join("")}
+                      {(selectedComplaint.studentName || "U").split(" ").map(n => n[0]).join("")}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="font-medium">{selectedComplaint.studentName}</p>
-                    {/* <p className="text-sm text-muted-foreground">Roll: {selectedComplaint.studentRoll}</p> */}
+                    <p className="font-medium">{selectedComplaint.studentName || "Unknown Student"}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {selectedComplaint.studentRollNumber && <span>{selectedComplaint.studentRollNumber} • </span>}
+                      {selectedComplaint.studentHostel}
+                      {selectedComplaint.studentRoom && <span> • Room {selectedComplaint.studentRoom}</span>}
+                    </p>
                   </div>
-                </div>
-              </div>
-
-              {/* Complaint Details */}
-              <div className="space-y-2">
-                <Label className="text-muted-foreground">Description</Label>
-                <p className="text-sm">{selectedComplaint.description}</p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-muted-foreground">Category</Label>
-                  <p className="text-sm">{getCategoryLabel(selectedComplaint.category)}</p>
                 </div>
                 <div className="space-y-2">
                   <Label className="text-muted-foreground">Status</Label>

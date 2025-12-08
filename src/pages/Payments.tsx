@@ -16,6 +16,7 @@ import { format } from "date-fns";
 import api from "@/api/client";
 
 import { AddPaymentDialog } from "@/components/dashboard/AddPaymentDialog";
+import { Loader } from "@/components/ui/loader";
 
 interface Transaction {
   _id: string;
@@ -24,7 +25,6 @@ interface Transaction {
     _id: string;
     rollNumber: string;
     hostel: string;
-    department: string;
   } | null;
   amount: number;
   type: string;
@@ -166,9 +166,9 @@ export default function Payments() {
 
   const handleExport = () => {
     const csv = [
-      ["TX ID", "Student", "Roll No", "Amount", "Method", "Date", "Status", "Hostel", "Department"],
+      ["TX ID", "Student", "Amount", "Method", "Date", "Status", "Hostel", "Department"],
       ...filteredTransactions.map(t => [
-        t._id, t.studentName, t.studentId?.rollNumber || "N/A", t.amount, t.method, t.date, t.status, t.studentId?.hostel || "N/A", t.studentId?.department || "N/A"
+        t._id, t.studentName, t.amount, t.method, t.date, t.status, t.studentId?.hostel || "N/A", t.studentId?.department || "N/A"
       ])
     ].map(row => row.join(",")).join("\n");
 
@@ -204,18 +204,24 @@ export default function Payments() {
     return <Badge variant={variant}>{label}</Badge>;
   };
 
+
+
+  if (isLoading) {
+    return <Loader />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Payments & Transactions</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Payments</h1>
           <p className="text-muted-foreground">Manage payments and transaction records</p>
         </div>
         <AddPaymentDialog onPaymentAdded={fetchPayments} />
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
         <StatsCard
           title="Total Collected"
           value={`₹${totalCollected.toLocaleString()}`}
@@ -323,7 +329,7 @@ export default function Payments() {
           </div>
 
           {/* Table */}
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -335,7 +341,6 @@ export default function Payments() {
                   </TableHead>
                   <TableHead>TX ID</TableHead>
                   <TableHead>Student</TableHead>
-                  <TableHead>Roll No</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Method</TableHead>
                   <TableHead>Date</TableHead>
@@ -373,7 +378,6 @@ export default function Payments() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{transaction.studentName}</TableCell>
-                      <TableCell>{transaction.studentId?.rollNumber || "N/A"}</TableCell>
                       <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
                       <TableCell>{transaction.method}</TableCell>
                       <TableCell>{format(new Date(transaction.date), "MMM dd, yyyy")}</TableCell>

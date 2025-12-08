@@ -1,5 +1,6 @@
 const express = require('express');
 const Announcement = require('../models/Announcement');
+const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 const router = express.Router();
 
@@ -16,6 +17,14 @@ router.post('/', auth, async (req, res) => {
     try {
         const announcement = new Announcement(req.body);
         await announcement.save();
+
+        // Create notification
+        await Notification.create({
+            title: 'New Announcement',
+            message: announcement.title,
+            type: 'announcement'
+        });
+
         res.status(201).send(announcement);
     } catch (error) {
         res.status(400).send(error);

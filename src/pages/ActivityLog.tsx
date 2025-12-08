@@ -104,11 +104,11 @@ export default function ActivityLog() {
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.details.toLowerCase().includes(searchTerm.toLowerCase());
+      log.action.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      log.details.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesModule = moduleFilter === "all" || log.module === moduleFilter;
     const matchesAction = actionFilter === "all" || log.action.includes(actionFilter);
-    
+
     return matchesSearch && matchesModule && matchesAction;
   });
 
@@ -132,7 +132,7 @@ export default function ActivityLog() {
     a.href = url;
     a.download = `activity-log-${format(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
-    
+
     toast({
       title: "Export Successful",
       description: "Activity log exported to CSV.",
@@ -154,7 +154,7 @@ export default function ActivityLog() {
       complaints: "bg-red-500/10 text-red-500 border-red-500/20",
       settings: "bg-gray-500/10 text-gray-500 border-gray-500/20",
     };
-    
+
     return (
       <Badge variant="outline" className={colors[module]}>
         {module.charAt(0).toUpperCase() + module.slice(1)}
@@ -174,7 +174,7 @@ export default function ActivityLog() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Activity Log</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Activity Log</h1>
           <p className="text-muted-foreground">View system activity and audit trail</p>
         </div>
       </div>
@@ -186,64 +186,66 @@ export default function ActivityLog() {
           <CardDescription>Filter and search system activities</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="flex-1 w-full">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search activities..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 w-full"
                 />
               </div>
             </div>
 
-            <Select value={moduleFilter} onValueChange={setModuleFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Module" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Modules</SelectItem>
-                <SelectItem value="students">Students</SelectItem>
-                <SelectItem value="payments">Payments</SelectItem>
-                <SelectItem value="plans">Plans</SelectItem>
-                <SelectItem value="menu">Menu</SelectItem>
-                <SelectItem value="announcements">Announcements</SelectItem>
-                <SelectItem value="complaints">Complaints</SelectItem>
-                <SelectItem value="settings">Settings</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-wrap gap-2 w-full md:w-auto">
+              <Select value={moduleFilter} onValueChange={setModuleFilter}>
+                <SelectTrigger className="flex-1 md:w-[150px]">
+                  <SelectValue placeholder="Module" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Modules</SelectItem>
+                  <SelectItem value="students">Students</SelectItem>
+                  <SelectItem value="payments">Payments</SelectItem>
+                  <SelectItem value="plans">Plans</SelectItem>
+                  <SelectItem value="menu">Menu</SelectItem>
+                  <SelectItem value="announcements">Announcements</SelectItem>
+                  <SelectItem value="complaints">Complaints</SelectItem>
+                  <SelectItem value="settings">Settings</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Select value={actionFilter} onValueChange={setActionFilter}>
-              <SelectTrigger className="w-[150px]">
-                <SelectValue placeholder="Action" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Actions</SelectItem>
-                <SelectItem value="Created">Created</SelectItem>
-                <SelectItem value="Updated">Updated</SelectItem>
-                <SelectItem value="Deleted">Deleted</SelectItem>
-                <SelectItem value="Login">Login</SelectItem>
-              </SelectContent>
-            </Select>
+              <Select value={actionFilter} onValueChange={setActionFilter}>
+                <SelectTrigger className="flex-1 md:w-[150px]">
+                  <SelectValue placeholder="Action" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Actions</SelectItem>
+                  <SelectItem value="Created">Created</SelectItem>
+                  <SelectItem value="Updated">Updated</SelectItem>
+                  <SelectItem value="Deleted">Deleted</SelectItem>
+                  <SelectItem value="Login">Login</SelectItem>
+                </SelectContent>
+              </Select>
 
-            <Button variant="outline" onClick={handleExport}>
-              <Download className="h-4 w-4 mr-2" />
-              Export CSV
-            </Button>
+              <Button variant="outline" onClick={handleExport} className="w-full md:w-auto">
+                <Download className="h-4 w-4 mr-2" />
+                Export CSV
+              </Button>
+            </div>
           </div>
 
           {/* Table */}
-          <div className="border rounded-lg">
+          <div className="border rounded-lg max-h-[calc(100vh-350px)] overflow-auto custom-scrollbar">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Timestamp</TableHead>
-                  <TableHead>User</TableHead>
+                  <TableHead className="hidden md:table-cell">User</TableHead>
                   <TableHead>Action</TableHead>
                   <TableHead>Module</TableHead>
-                  <TableHead>IP Address</TableHead>
+                  <TableHead className="hidden md:table-cell">IP Address</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
@@ -251,13 +253,13 @@ export default function ActivityLog() {
               <TableBody>
                 {filteredLogs.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell className="font-mono text-xs">
-                      {format(new Date(log.timestamp), "MMM dd, HH:mm:ss")}
+                    <TableCell className="font-mono text-xs whitespace-nowrap">
+                      {format(new Date(log.timestamp), "MMM dd, HH:mm")}
                     </TableCell>
-                    <TableCell className="font-medium">{log.user}</TableCell>
-                    <TableCell>{log.action}</TableCell>
+                    <TableCell className="font-medium hidden md:table-cell">{log.user}</TableCell>
+                    <TableCell className="min-w-[120px]">{log.action}</TableCell>
                     <TableCell>{getModuleBadge(log.module)}</TableCell>
-                    <TableCell className="font-mono text-xs">{log.ipAddress}</TableCell>
+                    <TableCell className="font-mono text-xs hidden md:table-cell">{log.ipAddress}</TableCell>
                     <TableCell>{getStatusBadge(log.status)}</TableCell>
                     <TableCell>
                       <Button
