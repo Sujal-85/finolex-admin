@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,31 +13,29 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Search, Download, Send, Check, X, Eye, Copy, Filter } from "lucide-react";
 import { StatsCard } from "@/components/shared/StatsCard";
 import { format } from "date-fns";
+import api from "@/api/client";
+
+import { AddPaymentDialog } from "@/components/dashboard/AddPaymentDialog";
+import { Loader } from "@/components/ui/loader";
 
 interface Transaction {
-  id: string;
+  _id: string;
   studentName: string;
-  rollNo: string;
+  studentId: {
+    _id: string;
+    rollNumber: string;
+    hostel: string;
+  } | null;
   amount: number;
-  paymentMode: string;
+  type: string;
+  method: string; // UPI, Card, Cash
   date: string;
-  status: "paid" | "pending" | "overdue" | "failed";
-  hostel: string;
-  department: string;
+  status: "Completed" | "Pending" | "Failed";
+  transactionId?: string;
 }
 
-// Mock data
-const mockTransactions: Transaction[] = [
-  { id: "TX001", studentName: "Rahul Sharma", rollNo: "CS001", amount: 5000, paymentMode: "UPI", date: "2024-01-15", status: "paid", hostel: "Block A", department: "CSE" },
-  { id: "TX002", studentName: "Priya Patel", rollNo: "EC002", amount: 5000, paymentMode: "Card", date: "2024-01-14", status: "paid", hostel: "Block B", department: "ECE" },
-  { id: "TX003", studentName: "Amit Kumar", rollNo: "ME003", amount: 5000, paymentMode: "Cash", date: "2024-01-10", status: "pending", hostel: "Block C", department: "MECH" },
-  { id: "TX004", studentName: "Sneha Reddy", rollNo: "CS004", amount: 5000, paymentMode: "UPI", date: "2024-01-05", status: "overdue", hostel: "Block A", department: "CSE" },
-  { id: "TX005", studentName: "Vikram Singh", rollNo: "EE005", amount: 5000, paymentMode: "Card", date: "2024-01-12", status: "paid", hostel: "Block B", department: "EEE" },
-  { id: "TX006", studentName: "Anjali Gupta", rollNo: "CS006", amount: 5000, paymentMode: "UPI", date: "2024-01-08", status: "failed", hostel: "Block A", department: "CSE" },
-];
-
 export default function Payments() {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -44,27 +44,47 @@ export default function Payments() {
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [showReminderModal, setShowReminderModal] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
+  const fetchPayments = async () => {
+    try {
+      const response = await api.get('/payments');
+      setTransactions(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch payments",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Calculate summary stats
-  const totalCollected = transactions.filter(t => t.status === "paid").reduce((sum, t) => sum + t.amount, 0);
-  const totalPending = transactions.filter(t => t.status === "pending").reduce((sum, t) => sum + t.amount, 0);
-  const totalOverdue = transactions.filter(t => t.status === "overdue").reduce((sum, t) => sum + t.amount, 0);
+  const totalCollected = transactions.filter(t => t.status === "Completed").reduce((sum, t) => sum + t.amount, 0);
+  const totalPending = transactions.filter(t => t.status === "Pending").reduce((sum, t) => sum + t.amount, 0);
+  const totalFailed = transactions.filter(t => t.status === "Failed").reduce((sum, t) => sum + t.amount, 0);
 
   // Filter transactions
   const filteredTransactions = transactions.filter(t => {
-    const matchesSearch = t.studentName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         t.rollNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         t.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = t.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (t.studentId?.rollNumber || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+      t._id.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-    const matchesHostel = hostelFilter === "all" || t.hostel === hostelFilter;
-    const matchesPaymentMode = paymentModeFilter === "all" || t.paymentMode === paymentModeFilter;
-    
+    const matchesHostel = hostelFilter === "all" || (t.studentId?.hostel || "") === hostelFilter;
+    const matchesPaymentMode = paymentModeFilter === "all" || t.method === paymentModeFilter;
+
     return matchesSearch && matchesStatus && matchesHostel && matchesPaymentMode;
   });
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedIds(filteredTransactions.map(t => t.id));
+      setSelectedIds(filteredTransactions.map(t => t._id));
     } else {
       setSelectedIds([]);
     }
@@ -78,15 +98,25 @@ export default function Payments() {
     }
   };
 
-  const handleMarkAsPaid = () => {
-    setTransactions(transactions.map(t => 
-      selectedIds.includes(t.id) ? { ...t, status: "paid" as const } : t
-    ));
-    toast({
-      title: "Payment Updated",
-      description: `${selectedIds.length} transaction(s) marked as paid.`,
-    });
-    setSelectedIds([]);
+  const handleMarkAsPaid = async () => {
+    try {
+      await Promise.all(selectedIds.map(id => api.patch(`/payments/${id}`, { status: 'Completed' })));
+
+      setTransactions(transactions.map(t =>
+        selectedIds.includes(t._id) ? { ...t, status: "Completed" as const } : t
+      ));
+      toast({
+        title: "Payment Updated",
+        description: `${selectedIds.length} transaction(s) marked as completed.`,
+      });
+      setSelectedIds([]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update payment status",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleSendReminder = () => {
@@ -98,11 +128,47 @@ export default function Payments() {
     setSelectedIds([]);
   };
 
+  const generateReceipt = () => {
+    if (!selectedTransaction) return;
+
+    const doc = new jsPDF();
+
+    // Header
+    doc.setFontSize(20);
+    doc.text("Finolex Canteen Receipt", 105, 15, { align: "center" });
+
+    doc.setFontSize(12);
+    doc.text(`Receipt ID: ${selectedTransaction._id}`, 14, 30);
+    doc.text(`Date: ${format(new Date(selectedTransaction.date), "MMM dd, yyyy")}`, 14, 38);
+
+    // Table
+    autoTable(doc, {
+      startY: 45,
+      head: [['Field', 'Value']],
+      body: [
+        ['Student Name', selectedTransaction.studentName],
+        ['Roll Number', selectedTransaction.studentId?.rollNumber || "N/A"],
+        ['Payment Method', selectedTransaction.method],
+        ['Transaction ID', selectedTransaction.transactionId || "N/A"],
+        ['Amount', `Rs. ${selectedTransaction.amount}`],
+        ['Status', selectedTransaction.status],
+      ],
+    });
+
+    // Footer
+    const finalY = (doc as any).lastAutoTable.finalY || 150;
+    doc.text("Thank you for your payment!", 105, finalY + 20, { align: "center" });
+
+    doc.save(`Receipt-${selectedTransaction._id}.pdf`);
+    toast({ title: "Receipt Downloaded", description: "Receipt PDF downloaded successfully." });
+    setShowReceiptModal(false);
+  };
+
   const handleExport = () => {
     const csv = [
-      ["TX ID", "Student", "Roll No", "Amount", "Payment Mode", "Date", "Status", "Hostel", "Department"],
+      ["TX ID", "Student", "Amount", "Method", "Date", "Status", "Hostel", "Department"],
       ...filteredTransactions.map(t => [
-        t.id, t.studentName, t.rollNo, t.amount, t.paymentMode, t.date, t.status, t.hostel, t.department
+        t._id, t.studentName, t.amount, t.method, t.date, t.status, t.studentId?.hostel || "N/A", t.studentId?.department || "N/A"
       ])
     ].map(row => row.join(",")).join("\n");
 
@@ -112,7 +178,7 @@ export default function Payments() {
     a.href = url;
     a.download = `transactions-${format(new Date(), "yyyy-MM-dd")}.csv`;
     a.click();
-    
+
     toast({
       title: "Export Successful",
       description: "Transactions exported to CSV.",
@@ -129,27 +195,33 @@ export default function Payments() {
 
   const getStatusBadge = (status: Transaction["status"]) => {
     const variants: Record<Transaction["status"], { variant: "default" | "secondary" | "destructive" | "outline", label: string }> = {
-      paid: { variant: "default", label: "Paid" },
-      pending: { variant: "secondary", label: "Pending" },
-      overdue: { variant: "destructive", label: "Overdue" },
-      failed: { variant: "outline", label: "Failed" },
+      Completed: { variant: "default", label: "Completed" },
+      Pending: { variant: "secondary", label: "Pending" },
+      Failed: { variant: "destructive", label: "Failed" },
     };
-    
-    const { variant, label } = variants[status];
+
+    const { variant, label } = variants[status] || variants.Pending;
     return <Badge variant={variant}>{label}</Badge>;
   };
+
+
+
+  if (isLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Payments & Transactions</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Payments</h1>
           <p className="text-muted-foreground">Manage payments and transaction records</p>
         </div>
+        <AddPaymentDialog onPaymentAdded={fetchPayments} />
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 grid-cols-2 md:grid-cols-3">
         <StatsCard
           title="Total Collected"
           value={`₹${totalCollected.toLocaleString()}`}
@@ -165,8 +237,8 @@ export default function Payments() {
           changeType="negative"
         />
         <StatsCard
-          title="Overdue Payments"
-          value={`₹${totalOverdue.toLocaleString()}`}
+          title="Failed Payments"
+          value={`₹${totalFailed.toLocaleString()}`}
           icon={X}
           change="+8% from last month"
           changeType="negative"
@@ -193,17 +265,16 @@ export default function Payments() {
                 />
               </div>
             </div>
-            
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="overdue">Overdue</SelectItem>
-                <SelectItem value="failed">Failed</SelectItem>
+                <SelectItem value="Completed">Completed</SelectItem>
+                <SelectItem value="Pending">Pending</SelectItem>
+                <SelectItem value="Failed">Failed</SelectItem>
               </SelectContent>
             </Select>
 
@@ -239,7 +310,7 @@ export default function Payments() {
               <div className="flex gap-2 ml-auto">
                 <Button size="sm" onClick={handleMarkAsPaid}>
                   <Check className="h-4 w-4 mr-2" />
-                  Mark as Paid
+                  Mark as Completed
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => setShowReminderModal(true)}>
                   <Send className="h-4 w-4 mr-2" />
@@ -258,78 +329,78 @@ export default function Payments() {
           </div>
 
           {/* Table */}
-          <div className="border rounded-lg">
+          <div className="border rounded-lg overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={selectedIds.length === filteredTransactions.length}
+                      checked={selectedIds.length === filteredTransactions.length && filteredTransactions.length > 0}
                       onCheckedChange={handleSelectAll}
                     />
                   </TableHead>
                   <TableHead>TX ID</TableHead>
                   <TableHead>Student</TableHead>
-                  <TableHead>Roll No</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Payment Mode</TableHead>
+                  <TableHead>Method</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTransactions.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>
-                      <Checkbox
-                        checked={selectedIds.includes(transaction.id)}
-                        onCheckedChange={(checked) => handleSelectOne(transaction.id, checked as boolean)}
-                      />
+                {filteredTransactions.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={9} className="text-center py-12 text-muted-foreground">
+                      {isLoading ? "Loading transactions..." : "No transactions found matching your filters."}
                     </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-sm">{transaction.id}</span>
+                  </TableRow>
+                ) : (
+                  filteredTransactions.map((transaction) => (
+                    <TableRow key={transaction._id}>
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.includes(transaction._id)}
+                          onCheckedChange={(checked) => handleSelectOne(transaction._id, checked as boolean)}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm">{transaction._id.slice(-6).toUpperCase()}</span>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                            onClick={() => handleCopyId(transaction._id)}
+                          >
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-medium">{transaction.studentName}</TableCell>
+                      <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
+                      <TableCell>{transaction.method}</TableCell>
+                      <TableCell>{format(new Date(transaction.date), "MMM dd, yyyy")}</TableCell>
+                      <TableCell>{getStatusBadge(transaction.status)}</TableCell>
+                      <TableCell>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-6 w-6 p-0"
-                          onClick={() => handleCopyId(transaction.id)}
+                          onClick={() => {
+                            setSelectedTransaction(transaction);
+                            setShowReceiptModal(true);
+                          }}
                         >
-                          <Copy className="h-3 w-3" />
+                          <Eye className="h-4 w-4 mr-1" />
+                          Receipt
                         </Button>
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-medium">{transaction.studentName}</TableCell>
-                    <TableCell>{transaction.rollNo}</TableCell>
-                    <TableCell>₹{transaction.amount.toLocaleString()}</TableCell>
-                    <TableCell>{transaction.paymentMode}</TableCell>
-                    <TableCell>{format(new Date(transaction.date), "MMM dd, yyyy")}</TableCell>
-                    <TableCell>{getStatusBadge(transaction.status)}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedTransaction(transaction);
-                          setShowReceiptModal(true);
-                        }}
-                      >
-                        <Eye className="h-4 w-4 mr-1" />
-                        Receipt
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
           </div>
-
-          {filteredTransactions.length === 0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              No transactions found matching your filters.
-            </div>
-          )}
         </CardContent>
       </Card>
 
@@ -345,9 +416,9 @@ export default function Payments() {
               <div className="border rounded-lg p-4 space-y-3">
                 <div className="flex justify-between items-center pb-3 border-b">
                   <span className="font-semibold text-lg">Receipt</span>
-                  <span className="font-mono text-sm text-muted-foreground">{selectedTransaction.id}</span>
+                  <span className="font-mono text-sm text-muted-foreground">{selectedTransaction._id}</span>
                 </div>
-                
+
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Student:</span>
@@ -355,7 +426,7 @@ export default function Payments() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Roll No:</span>
-                    <span className="font-medium">{selectedTransaction.rollNo}</span>
+                    <span className="font-medium">{selectedTransaction.studentId?.rollNumber || "N/A"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Date:</span>
@@ -363,7 +434,7 @@ export default function Payments() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Payment Mode:</span>
-                    <span className="font-medium">{selectedTransaction.paymentMode}</span>
+                    <span className="font-medium">{selectedTransaction.method}</span>
                   </div>
                   <div className="flex justify-between pt-2 border-t">
                     <span className="text-muted-foreground">Amount:</span>
@@ -381,10 +452,7 @@ export default function Payments() {
             <Button variant="outline" onClick={() => setShowReceiptModal(false)}>
               Close
             </Button>
-            <Button onClick={() => {
-              toast({ title: "Receipt Downloaded", description: "Receipt PDF downloaded successfully." });
-              setShowReceiptModal(false);
-            }}>
+            <Button onClick={generateReceipt}>
               <Download className="h-4 w-4 mr-2" />
               Download PDF
             </Button>

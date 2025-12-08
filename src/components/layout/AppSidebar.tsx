@@ -9,6 +9,8 @@ import {
   Settings,
   FileText,
   Tag,
+  Star,
+  Receipt,
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import {
@@ -27,6 +29,7 @@ const mainNavItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Students", url: "/students", icon: Users },
   { title: "Payments", url: "/payments", icon: CreditCard },
+  { title: "Transactions", url: "/transactions", icon: Receipt },
   { title: "Plans & Pricing", url: "/plans", icon: Tag },
 ];
 
@@ -34,6 +37,7 @@ const managementItems = [
   { title: "Menu", url: "/menu", icon: UtensilsCrossed },
   { title: "Announcements", url: "/announcements", icon: Megaphone },
   { title: "Complaints", url: "/complaints", icon: MessageSquare },
+  { title: "Feedback", url: "/feedback", icon: Star },
 ];
 
 const systemItems = [
@@ -49,8 +53,9 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarContent>
         <div className="flex items-center gap-2 px-4 py-4">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <UtensilsCrossed className="h-4 w-4 text-primary-foreground" />
+          <div className="flex items-center justify-center rounded-lg">
+            {/* <UtensilsCrossed className="h-4 w-4 text-primary-foreground" /> */}
+            <img src="/logo.png" className="rounded-full w-12 h-18"></img>
           </div>
           {open && (
             <div className="flex flex-col">

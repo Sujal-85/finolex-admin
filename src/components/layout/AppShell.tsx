@@ -6,11 +6,11 @@ import { Outlet } from "react-router-dom";
 export function AppShell() {
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-background">
+      <div className="flex h-screen w-full bg-background overflow-hidden">
         <AppSidebar />
-        <div className="flex flex-1 flex-col">
+        <div className="flex flex-1 flex-col h-full overflow-hidden">
           <TopNavbar />
-          <main className="flex-1 p-6">
+          <main className="flex-1 p-4 md:p-6 overflow-y-auto">
             <Outlet />
           </main>
         </div>

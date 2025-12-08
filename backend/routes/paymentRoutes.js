@@ -1,0 +1,86 @@
+const express = require('express');
+const Payment = require('../models/Payment');
+const Notification = require('../models/Notification');
+const auth = require('../middleware/auth');
+const router = express.Router();
+
+const mongoose = require('mongoose');
+
+router.get('/', auth, async (req, res) => {
+    try {
+        const { studentId } = req.query;
+        // console.log("GET /payments query:", req.query);
+        const query = {};
+        if (studentId) {
+            query.studentId = new mongoose.Types.ObjectId(studentId);
+        }
+
+        const payments = await Payment.find(query).sort({ date: -1 }).populate('studentId', 'rollNumber hostel department');
+        res.send(payments);
+    } catch (error) {
+        // console.error(error);
+        res.status(500).send(error);
+    }
+});
+
+router.post('/', auth, async (req, res) => {
+    try {
+        const payment = new Payment(req.body);
+        await payment.save();
+
+        // Create notification
+        await Notification.create({
+            title: 'New Payment Received',
+            message: `Received ₹${payment.amount} from ${payment.studentName}`,
+            type: 'payment'
+        });
+
+        // Create transaction record
+        const Transaction = require('../models/Transaction');
+        await Transaction.create({
+            paymentId: payment._id,
+            studentId: payment.studentId,
+            studentName: payment.studentName,
+            amount: payment.amount,
+            type: payment.type,
+            status: payment.status,
+            method: payment.method,
+            transactionId: payment.transactionId,
+            remarks: payment.remarks
+        });
+
+        // Update Student's nextDueDate if it's a Meal Plan payment
+        if (payment.type === 'Meal Plan') {
+            const Student = require('../models/Student');
+            const student = await Student.findById(payment.studentId);
+            if (student) {
+                const currentDueDate = student.nextDueDate ? new Date(student.nextDueDate) : new Date();
+                // Add 30 days
+                currentDueDate.setDate(currentDueDate.getDate() + 30);
+                student.nextDueDate = currentDueDate;
+                await student.save();
+            }
+        }
+
+        // Emit real-time event
+        req.io.emit('payment_updated', payment);
+
+        res.status(201).send(payment);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+router.patch('/:id', auth, async (req, res) => {
+    try {
+        const payment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        if (!payment) {
+            return res.status(404).send();
+        }
+        res.send(payment);
+    } catch (error) {
+        res.status(400).send(error);
+    }
+});
+
+module.exports = router;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,19 +9,24 @@ import { toast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Star, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
 
 interface MenuItem {
-  id: string;
+  _id: string;
   name: string;
   description: string;
   allergens?: string[];
   isSpecial: boolean;
+  price: number;
+  category: string;
+  day?: string;
+  mealType?: string;
 }
 
 interface DayMenu {
   breakfast: MenuItem[];
   lunch: MenuItem[];
-  snacks: MenuItem[];
   dinner: MenuItem[];
 }
 
@@ -31,28 +36,8 @@ interface WeekMenu {
 
 const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-const mockWeekMenu: WeekMenu = {
-  Monday: {
-    breakfast: [
-      { id: "1", name: "Idli Sambar", description: "Steamed rice cakes with lentil soup", isSpecial: false },
-      { id: "2", name: "Poha", description: "Flattened rice with vegetables", isSpecial: false },
-    ],
-    lunch: [
-      { id: "3", name: "Dal Tadka", description: "Yellow lentils with spices", isSpecial: false },
-      { id: "4", name: "Paneer Butter Masala", description: "Cottage cheese in rich gravy", isSpecial: true },
-    ],
-    snacks: [
-      { id: "5", name: "Samosa", description: "Fried pastry with spiced filling", isSpecial: false },
-    ],
-    dinner: [
-      { id: "6", name: "Chicken Curry", description: "Spiced chicken curry", allergens: ["Dairy"], isSpecial: false },
-      { id: "7", name: "Roti", description: "Wheat flatbread", isSpecial: false },
-    ],
-  },
-};
-
 export default function Menu() {
-  const [weekMenu, setWeekMenu] = useState<WeekMenu>(mockWeekMenu);
+  const [weekMenu, setWeekMenu] = useState<WeekMenu>({});
   const [selectedDay, setSelectedDay] = useState<string>(daysOfWeek[0]);
   const [showItemModal, setShowItemModal] = useState(false);
   const [editingItem, setEditingItem] = useState<{ item: MenuItem; mealType: keyof DayMenu } | null>(null);
@@ -63,10 +48,57 @@ export default function Menu() {
     description: "",
     allergens: "",
     isSpecial: false,
+    price: 0,
+    category: "General"
   });
+  const [isLoading, setIsLoading] = useState(true); // Add isLoading state
+
+  useEffect(() => {
+    fetchMenu();
+  }, []);
+
+  const fetchMenu = async () => {
+    try {
+      const response = await api.get('/menu');
+      const items: MenuItem[] = response.data;
+
+      const newWeekMenu: WeekMenu = {};
+      daysOfWeek.forEach(day => {
+        newWeekMenu[day] = { breakfast: [], lunch: [], dinner: [] };
+      });
+
+      items.forEach(item => {
+        if (item.day && item.mealType) {
+          if (!newWeekMenu[item.day]) {
+            newWeekMenu[item.day] = { breakfast: [], lunch: [], dinner: [] };
+          }
+          // @ts-ignore
+          if (newWeekMenu[item.day][item.mealType]) {
+            // @ts-ignore
+            newWeekMenu[item.day][item.mealType].push(item);
+          }
+        }
+      });
+      setWeekMenu(newWeekMenu);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch menu items",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
+  if (isLoading) {
+    return <Loader />;
+  }
 
   const dayIndex = daysOfWeek.indexOf(selectedDay);
-  const currentDayMenu = weekMenu[selectedDay] || { breakfast: [], lunch: [], snacks: [], dinner: [] };
+  const currentDayMenu = weekMenu[selectedDay] || { breakfast: [], lunch: [], dinner: [] };
 
   const handlePreviousDay = () => {
     const newIndex = (dayIndex - 1 + daysOfWeek.length) % daysOfWeek.length;
@@ -81,7 +113,7 @@ export default function Menu() {
   const handleAddItem = (mealType: keyof DayMenu) => {
     setEditingItem(null);
     setSelectedMealType(mealType);
-    setFormData({ name: "", description: "", allergens: "", isSpecial: false });
+    setFormData({ name: "", description: "", allergens: "", isSpecial: false, price: 0, category: "General" });
     setShowItemModal(true);
   };
 
@@ -93,11 +125,13 @@ export default function Menu() {
       description: item.description,
       allergens: item.allergens?.join(", ") || "",
       isSpecial: item.isSpecial,
+      price: item.price,
+      category: item.category
     });
     setShowItemModal(true);
   };
 
-  const handleSaveItem = () => {
+  const handleSaveItem = async () => {
     if (!formData.name) {
       toast({
         title: "Validation Error",
@@ -112,54 +146,61 @@ export default function Menu() {
       .map(a => a.trim())
       .filter(a => a);
 
-    const newItem: MenuItem = {
-      id: editingItem?.item.id || `${Date.now()}`,
+    const itemData = {
       name: formData.name,
       description: formData.description,
-      allergens: allergens.length > 0 ? allergens : undefined,
+      allergens: allergens,
       isSpecial: formData.isSpecial,
+      price: formData.price,
+      category: formData.category,
+      day: selectedDay,
+      mealType: selectedMealType
     };
 
-    setWeekMenu(prev => {
-      const updatedDay = { ...prev[selectedDay] };
-      
+    try {
       if (editingItem) {
-        updatedDay[selectedMealType] = updatedDay[selectedMealType].map(item =>
-          item.id === editingItem.item.id ? newItem : item
-        );
+        await api.patch(`/menu/${editingItem.item._id}`, itemData);
       } else {
-        updatedDay[selectedMealType] = [...updatedDay[selectedMealType], newItem];
+        await api.post('/menu', itemData);
       }
 
-      return { ...prev, [selectedDay]: updatedDay };
-    });
+      await fetchMenu();
 
-    toast({
-      title: editingItem ? "Item Updated" : "Item Added",
-      description: `Menu item ${editingItem ? "updated" : "added"} successfully.`,
-    });
+      toast({
+        title: editingItem ? "Item Updated" : "Item Added",
+        description: `Menu item ${editingItem ? "updated" : "added"} successfully.`,
+      });
 
-    setShowItemModal(false);
+      setShowItemModal(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save menu item",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteItem = (itemId: string, mealType: keyof DayMenu) => {
-    setWeekMenu(prev => ({
-      ...prev,
-      [selectedDay]: {
-        ...prev[selectedDay],
-        [mealType]: prev[selectedDay][mealType].filter(item => item.id !== itemId),
-      },
-    }));
-
-    toast({ title: "Item Deleted", description: "Menu item removed successfully." });
+  const handleDeleteItem = async (itemId: string, mealType: keyof DayMenu) => {
+    try {
+      await api.delete(`/menu/${itemId}`);
+      await fetchMenu();
+      toast({ title: "Item Deleted", description: "Menu item removed successfully." });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete menu item",
+        variant: "destructive",
+      });
+    }
   };
 
   const handlePublish = () => {
     setIsPublished(!isPublished);
     toast({
       title: isPublished ? "Menu Unpublished" : "Menu Published",
-      description: isPublished 
-        ? "Menu has been unpublished from today's display." 
+      description: isPublished
+        ? "Menu has been unpublished from today's display."
         : "Menu is now live on today's menu display.",
     });
   };
@@ -170,7 +211,7 @@ export default function Menu() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>{title}</CardTitle>
-            <CardDescription>{items.length} items</CardDescription>
+            <CardDescription>{items?.length || 0} items</CardDescription>
           </div>
           <Button size="sm" onClick={() => handleAddItem(mealType)}>
             <Plus className="h-4 w-4 mr-1" />
@@ -179,13 +220,13 @@ export default function Menu() {
         </div>
       </CardHeader>
       <CardContent>
-        {items.length === 0 ? (
+        {(!items || items.length === 0) ? (
           <p className="text-sm text-muted-foreground text-center py-4">No items added yet</p>
         ) : (
           <div className="space-y-3">
             {items.map((item) => (
               <div
-                key={item.id}
+                key={item._id}
                 className="flex items-start justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors"
               >
                 <div className="flex-1 space-y-1">
@@ -197,6 +238,7 @@ export default function Menu() {
                         Special
                       </Badge>
                     )}
+                    <Badge variant="secondary" className="text-xs">₹{item.price}</Badge>
                   </div>
                   {item.description && (
                     <p className="text-sm text-muted-foreground">{item.description}</p>
@@ -222,7 +264,7 @@ export default function Menu() {
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDeleteItem(item.id, mealType)}
+                    onClick={() => handleDeleteItem(item._id, mealType)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
@@ -237,12 +279,12 @@ export default function Menu() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Menu Management</h1>
           <p className="text-muted-foreground">Manage daily and weekly menu</p>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
             <Label htmlFor="publish">Publish Today's Menu</Label>
             <Switch id="publish" checked={isPublished} onCheckedChange={handlePublish} />
@@ -257,15 +299,15 @@ export default function Menu() {
             <Button variant="outline" size="sm" onClick={handlePreviousDay}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            
-            <div className="flex gap-2">
+
+            <div className="flex gap-2 overflow-x-auto pb-2 md:pb-0 w-full md:w-auto md:justify-center">
               {daysOfWeek.map((day) => (
                 <Button
                   key={day}
                   variant={day === selectedDay ? "default" : "outline"}
                   size="sm"
                   onClick={() => setSelectedDay(day)}
-                  className="min-w-[100px]"
+                  className="min-w-[100px] shrink-0"
                 >
                   {day}
                 </Button>
@@ -280,10 +322,9 @@ export default function Menu() {
       </Card>
 
       {/* Meal Sections */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
         {renderMealSection("Breakfast", "breakfast", currentDayMenu.breakfast)}
         {renderMealSection("Lunch", "lunch", currentDayMenu.lunch)}
-        {renderMealSection("Snacks", "snacks", currentDayMenu.snacks)}
         {renderMealSection("Dinner", "dinner", currentDayMenu.dinner)}
       </div>
 
@@ -304,6 +345,17 @@ export default function Menu() {
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., Idli Sambar"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="price">Price (₹) *</Label>
+              <Input
+                id="price"
+                type="number"
+                value={formData.price}
+                onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                placeholder="e.g., 50"
               />
             </div>
 

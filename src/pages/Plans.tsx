@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,11 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Users, Check } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
+import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
 
 interface Plan {
-  id: string;
+  _id: string;
   name: string;
   type: "basic" | "standard" | "premium";
   price: number;
@@ -20,38 +22,8 @@ interface Plan {
   subscriberCount: number;
 }
 
-const mockPlans: Plan[] = [
-  {
-    id: "1",
-    name: "Basic Mess Plan",
-    type: "basic",
-    price: 3500,
-    features: ["Breakfast", "Lunch", "Dinner", "Basic Menu"],
-    active: true,
-    subscriberCount: 150,
-  },
-  {
-    id: "2",
-    name: "Standard Mess Plan",
-    type: "standard",
-    price: 5000,
-    features: ["Breakfast", "Lunch", "Dinner", "Evening Snacks", "Premium Menu", "Weekend Specials"],
-    active: true,
-    subscriberCount: 320,
-  },
-  {
-    id: "3",
-    name: "Premium Mess Plan",
-    type: "premium",
-    price: 6500,
-    features: ["All Meals", "Premium Menu", "Weekend Specials", "Guest Meal Allowance", "Special Diet Options"],
-    active: true,
-    subscriberCount: 85,
-  },
-];
-
 export default function Plans() {
-  const [plans, setPlans] = useState<Plan[]>(mockPlans);
+  const [plans, setPlans] = useState<Plan[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [editingPlan, setEditingPlan] = useState<Plan | null>(null);
@@ -62,6 +34,32 @@ export default function Plans() {
     price: "",
     features: "",
   });
+  const [isLoading, setIsLoading] = useState(true); // Add isLoading state
+
+  useEffect(() => {
+    fetchPlans();
+  }, []);
+
+  const fetchPlans = async () => {
+    try {
+      const response = await api.get('/plans');
+      setPlans(response.data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch plans",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+
+
+  if (isLoading) {
+    return <Loader />;
+  }
 
   const handleAddNew = () => {
     setEditingPlan(null);
@@ -80,7 +78,7 @@ export default function Plans() {
     setShowModal(true);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!formData.name || !formData.price) {
       toast({
         title: "Validation Error",
@@ -91,32 +89,33 @@ export default function Plans() {
     }
 
     const features = formData.features.split(",").map(f => f.trim()).filter(f => f);
-    
-    if (editingPlan) {
-      setPlans(plans.map(p => 
-        p.id === editingPlan.id 
-          ? { ...p, name: formData.name, type: formData.type, price: Number(formData.price), features }
-          : p
-      ));
-      toast({ title: "Plan Updated", description: "Mess plan updated successfully." });
-    } else {
-      const newPlan: Plan = {
-        id: `${plans.length + 1}`,
-        name: formData.name,
-        type: formData.type,
-        price: Number(formData.price),
-        features,
-        active: true,
-        subscriberCount: 0,
-      };
-      setPlans([...plans, newPlan]);
-      toast({ title: "Plan Created", description: "New mess plan created successfully." });
+    const planData = {
+      name: formData.name,
+      type: formData.type,
+      price: Number(formData.price),
+      features,
+    };
+
+    try {
+      if (editingPlan) {
+        await api.patch(`/plans/${editingPlan._id}`, planData);
+        toast({ title: "Plan Updated", description: "Mess plan updated successfully." });
+      } else {
+        await api.post('/plans', planData);
+        toast({ title: "Plan Created", description: "New mess plan created successfully." });
+      }
+      fetchPlans();
+      setShowModal(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save plan",
+        variant: "destructive",
+      });
     }
-    
-    setShowModal(false);
   };
 
-  const handleToggleActive = (plan: Plan) => {
+  const handleToggleActive = async (plan: Plan) => {
     if (plan.subscriberCount > 0 && plan.active) {
       toast({
         title: "Cannot Deactivate",
@@ -126,22 +125,37 @@ export default function Plans() {
       return;
     }
 
-    setPlans(plans.map(p => 
-      p.id === plan.id ? { ...p, active: !p.active } : p
-    ));
-    
-    toast({
-      title: plan.active ? "Plan Deactivated" : "Plan Activated",
-      description: `${plan.name} has been ${plan.active ? "deactivated" : "activated"}.`,
-    });
+    try {
+      await api.patch(`/plans/${plan._id}`, { active: !plan.active });
+      toast({
+        title: plan.active ? "Plan Deactivated" : "Plan Activated",
+        description: `${plan.name} has been ${plan.active ? "deactivated" : "activated"}.`,
+      });
+      fetchPlans();
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update plan status",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDelete = () => {
+  const handleDelete = async () => {
     if (deletingPlan) {
-      setPlans(plans.filter(p => p.id !== deletingPlan.id));
-      toast({ title: "Plan Deleted", description: "Mess plan deleted successfully." });
-      setShowDeleteModal(false);
-      setDeletingPlan(null);
+      try {
+        await api.delete(`/plans/${deletingPlan._id}`);
+        toast({ title: "Plan Deleted", description: "Mess plan deleted successfully." });
+        setShowDeleteModal(false);
+        setDeletingPlan(null);
+        fetchPlans();
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to delete plan",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -169,12 +183,12 @@ export default function Plans() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {plans.map((plan) => (
-          <Card key={plan.id} className={`relative ${!plan.active && "opacity-60"}`}>
+          <Card key={plan._id} className={`relative ${!plan.active && "opacity-60"}`}>
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-1">
                   <CardTitle>{plan.name}</CardTitle>
-                  <CardDescription>{getPlanBadge(plan.type)}</CardDescription>
+                  <div className="text-sm text-muted-foreground">{getPlanBadge(plan.type)}</div>
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" onClick={() => handleEdit(plan)}>
@@ -198,7 +212,7 @@ export default function Plans() {
                 <p className="text-3xl font-bold">₹{plan.price.toLocaleString()}</p>
                 <p className="text-sm text-muted-foreground">per month</p>
               </div>
-              
+
               <div className="space-y-2">
                 {plan.features.map((feature, idx) => (
                   <div key={idx} className="flex items-center gap-2">
@@ -217,9 +231,9 @@ export default function Plans() {
             </CardContent>
             <CardFooter>
               <div className="flex items-center justify-between w-full">
-                <Label htmlFor={`active-${plan.id}`}>Active</Label>
+                <Label htmlFor={`active-${plan._id}`}>Active</Label>
                 <Switch
-                  id={`active-${plan.id}`}
+                  id={`active-${plan._id}`}
                   checked={plan.active}
                   onCheckedChange={() => handleToggleActive(plan)}
                 />
@@ -256,7 +270,7 @@ export default function Plans() {
                 type="number"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                placeholder="5000"
+                placeholder="3500"
               />
             </div>
 

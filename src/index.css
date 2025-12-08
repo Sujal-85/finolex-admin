@@ -11,57 +11,57 @@ All colors MUST be HSL.
     /* Base surfaces */
     --background: 210 20% 98%;
     --foreground: 222 47% 11%;
-    
+
     /* Cards and elevated surfaces */
     --card: 0 0% 100%;
     --card-foreground: 222 47% 11%;
-    
+
     /* Popovers */
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    
+
     /* Primary - Blue theme */
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
     --primary-hover: 217 91% 55%;
     --primary-light: 217 91% 95%;
-    
+
     /* Success/Accent - Emerald */
     --success: 158 64% 52%;
     --success-foreground: 0 0% 100%;
     --success-light: 158 64% 95%;
-    
+
     /* Warning */
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
     --warning-light: 38 92% 95%;
-    
+
     /* Danger */
     --danger: 0 84% 60%;
     --danger-foreground: 0 0% 100%;
     --danger-light: 0 84% 95%;
-    
+
     /* Secondary surfaces */
     --secondary: 210 17% 95%;
     --secondary-foreground: 222 47% 11%;
-    
+
     /* Muted elements */
     --muted: 210 17% 95%;
     --muted-foreground: 215 14% 34%;
-    
+
     /* Accent elements */
     --accent: 217 91% 60%;
     --accent-foreground: 0 0% 100%;
-    
+
     /* Destructive */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-    
+
     /* Borders and inputs */
     --border: 214 32% 91%;
     --input: 214 32% 91%;
     --ring: 217 91% 60%;
-    
+
     /* Sidebar */
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 17% 82%;
@@ -71,17 +71,17 @@ All colors MUST be HSL.
     --sidebar-accent-foreground: 210 17% 95%;
     --sidebar-border: 222 47% 16%;
     --sidebar-ring: 217 91% 60%;
-    
+
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
     --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
-    
+
     /* Animations */
     --transition-base: 150ms cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
-    
+
     --radius: 0.5rem;
   }
 }
@@ -93,5 +93,38 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Hide scrollbar for IE, Edge and Firefox */
+  html {
+    -ms-overflow-style: none;
+    /* IE and Edge */
+    scrollbar-width: none;
+    /* Firefox */
+  }
+}
+
+@layer utilities {
+  @media (max-width: 640px) {
+    html {
+      font-size: 14px;
+      /* Scale down base font size */
+    }
+
+    /* Reduce table cell padding on mobile */
+    td,
+    th {
+      padding-left: 0.5rem !important;
+      padding-right: 0.5rem !important;
+      padding-top: 0.5rem !important;
+      padding-bottom: 0.5rem !important;
+      font-size: 0.85rem;
+      /* Slightly smaller text in tables */
+    }
   }
 }

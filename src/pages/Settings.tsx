@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -9,58 +9,185 @@ import { toast } from "@/hooks/use-toast";
 import { Upload, Save } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import api from "@/api/client";
+import { Loader } from "@/components/ui/loader";
 
 export default function Settings() {
-  const [generalSettings, setGeneralSettings] = useState({
-    collegeName: "XYZ College of Engineering",
-    canteenName: "Central Mess",
-    address: "123 College Road, City - 123456",
-    contactEmail: "mess@xyzcollege.edu",
-    contactPhone: "+91-1234567890",
-  });
-
-  const [notificationSettings, setNotificationSettings] = useState({
-    emailNotifications: true,
-    smsNotifications: false,
-    pushNotifications: true,
-    paymentReminders: true,
-    complaintAlerts: true,
-  });
-
-  const [systemSettings, setSystemSettings] = useState({
-    currency: "INR",
-    timezone: "Asia/Kolkata",
-    dateFormat: "dd/MM/yyyy",
-    language: "en",
-  });
-
-  const handleSaveGeneral = () => {
-    toast({
-      title: "Settings Saved",
-      description: "General settings updated successfully.",
-    });
+  // Helper to load from localStorage
+  const loadFromStorage = (key: string, defaultValue: any) => {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : defaultValue;
   };
 
-  const handleSaveNotifications = () => {
-    toast({
-      title: "Settings Saved",
-      description: "Notification preferences updated successfully.",
-    });
+  const [generalSettings, setGeneralSettings] = useState(() =>
+    loadFromStorage('settings_general', {
+      collegeName: "",
+      canteenName: "",
+      address: "",
+      contactEmail: "",
+      contactPhone: "",
+    })
+  );
+
+  const [notificationSettings, setNotificationSettings] = useState(() =>
+    loadFromStorage('settings_notifications', {
+      emailNotifications: true,
+      smsNotifications: false,
+      pushNotifications: true,
+      paymentReminders: true,
+      complaintAlerts: true,
+    })
+  );
+
+  const [systemSettings, setSystemSettings] = useState(() =>
+    loadFromStorage('settings_system', {
+      currency: "INR",
+      timezone: "Asia/Kolkata",
+      dateFormat: "dd/MM/yyyy",
+      language: "en",
+    })
+  );
+
+  // const [logoName, setLogoName] = useState<string | null>(localStorage.getItem('settings_logoName'));
+  // Don't load from localStorage - fetch from server instead to avoid QuotaExceededError
+  const [logoName, setLogoName] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Persist to localStorage whenever state changes
+  useEffect(() => {
+    // Exclude logoUrl from localStorage as it can be too large (Base64)
+    const { logoUrl, ...settingsToSave } = generalSettings as any;
+    localStorage.setItem('settings_general', JSON.stringify(settingsToSave));
+  }, [generalSettings]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_notifications', JSON.stringify(notificationSettings));
+  }, [notificationSettings]);
+
+  useEffect(() => {
+    localStorage.setItem('settings_system', JSON.stringify(systemSettings));
+  }, [systemSettings]);
+
+  // Removed logoName localStorage useEffect to prevent crash
+
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      const response = await api.get('/settings');
+      const data = response.data;
+
+      setGeneralSettings({
+        collegeName: data.collegeName || "",
+        canteenName: data.canteenName || "",
+        address: data.address || "",
+        contactEmail: data.contactEmail || "",
+        contactPhone: data.contactPhone || "",
+      });
+
+      if (data.notificationSettings) {
+        setNotificationSettings(data.notificationSettings);
+      }
+
+      setSystemSettings({
+        currency: data.currency || "INR",
+        timezone: data.timezone || "Asia/Kolkata",
+        dateFormat: data.dateFormat || "dd/MM/yyyy",
+        language: data.language || "en",
+      });
+
+      if (data.logoUrl) {
+        setLogoName(data.logoUrl);
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to fetch settings",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleSaveSystem = () => {
-    toast({
-      title: "Settings Saved",
-      description: "System settings updated successfully.",
-    });
+  const handleSaveGeneral = async () => {
+    try {
+      await api.patch('/settings', generalSettings);
+      toast({
+        title: "Settings Saved",
+        description: "General settings updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save general settings",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleLogoUpload = () => {
-    toast({
-      title: "Logo Uploaded",
-      description: "College logo updated successfully.",
-    });
+  const handleSaveNotifications = async () => {
+    try {
+      await api.patch('/settings', { notificationSettings });
+      toast({
+        title: "Settings Saved",
+        description: "Notification preferences updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save notification settings",
+        variant: "destructive",
+      });
+    }
   };
+
+  const handleSaveSystem = async () => {
+    try {
+      await api.patch('/settings', systemSettings);
+      toast({
+        title: "Settings Saved",
+        description: "System settings updated successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to save system settings",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLogoUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleLogoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setLogoName(base64String); // Using logoName state to store the preview/base64 for now
+        setGeneralSettings(prev => ({ ...prev, logoUrl: base64String } as any));
+
+        toast({
+          title: "Logo Selected",
+          description: `${file.name} selected. Save general settings to apply.`,
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+
+
+  if (isLoading) {
+    return <Loader />;
+  }
 
   return (
     <div className="space-y-6">
@@ -149,10 +276,25 @@ export default function Settings() {
               <div className="space-y-2">
                 <Label>College Logo</Label>
                 <div className="flex items-center gap-4">
-                  <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-xs text-muted-foreground">Logo</span>
+                  <div className="h-24 w-24 bg-muted rounded-lg flex items-center justify-center overflow-hidden relative border">
+                    {logoName ? (
+                      <img
+                        src={logoName}
+                        alt="College Logo"
+                        className="h-full w-full object-contain"
+                      />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">No Logo</span>
+                    )}
                   </div>
-                  <Button variant="outline" onClick={handleLogoUpload}>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleLogoChange}
+                  />
+                  <Button variant="outline" onClick={handleLogoUploadClick}>
                     <Upload className="h-4 w-4 mr-2" />
                     Upload Logo
                   </Button>
