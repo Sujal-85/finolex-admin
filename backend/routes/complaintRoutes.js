@@ -3,6 +3,7 @@ const Complaint = require('../models/Complaint');
 const Notification = require('../models/Notification');
 const Student = require('../models/Student'); // Imported Student model for fallback
 const auth = require('../middleware/auth');
+const logActivity = require('../utils/activityLogger');
 const router = express.Router();
 
 const mongoose = require('mongoose');
@@ -129,6 +130,14 @@ router.post('/', auth, async (req, res) => {
             type: 'complaint'
         });
 
+        await logActivity({
+            user: req.user.name || 'Admin',
+            action: 'Created Complaint',
+            module: 'complaints',
+            details: `New complaint logged: ${complaint.subject}`,
+            ipAddress: req.ip
+        });
+
         res.status(201).send(complaint);
     } catch (error) {
         res.status(400).send(error);
@@ -139,6 +148,17 @@ router.patch('/:id', auth, async (req, res) => {
     try {
         const complaint = await Complaint.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!complaint) return res.status(404).send();
+
+        if (req.body.status) {
+            await logActivity({
+                user: req.user.name || 'Admin',
+                action: 'Updated Complaint',
+                module: 'complaints',
+                details: `Complaint status updated to ${req.body.status}`,
+                ipAddress: req.ip
+            });
+        }
+
         res.send(complaint);
     } catch (error) {
         res.status(400).send(error);

@@ -10,7 +10,8 @@ const chatModel = new ChatOpenAI({
     configuration: {
         baseURL: "https://openrouter.ai/api/v1",
     },
-    modelName: "google/gemini-2.0-flash-exp:free", // Using a free model for now, can be changed
+    // Using a reliable model from OpenRouter
+    modelName: "google/gemini-2.0-flash-exp:free",
     temperature: 0.7,
 });
 

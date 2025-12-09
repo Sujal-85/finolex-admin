@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Button } from "@/components/ui/button";
@@ -34,9 +35,10 @@ interface Transaction {
 }
 
 export default function Transactions() {
+    const [searchParams] = useSearchParams();
     const [transactions, setTransactions] = useState<Transaction[]>([]);
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
-    const [searchTerm, setSearchTerm] = useState("");
+    const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
     const [statusFilter, setStatusFilter] = useState("all");
     const [methodFilter, setMethodFilter] = useState("all");
     const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -46,6 +48,13 @@ export default function Transactions() {
     useEffect(() => {
         fetchTransactions();
     }, []);
+
+    useEffect(() => {
+        const query = searchParams.get("search");
+        if (query) {
+            setSearchTerm(query);
+        }
+    }, [searchParams]);
 
     const fetchTransactions = async () => {
         try {

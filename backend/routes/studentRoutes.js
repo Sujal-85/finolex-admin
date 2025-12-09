@@ -2,6 +2,7 @@ const express = require('express');
 const Student = require('../models/Student');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
+const logActivity = require('../utils/activityLogger');
 const router = express.Router();
 
 const Plan = require('../models/Plan');
@@ -80,6 +81,14 @@ router.post('/', auth, async (req, res) => {
             type: 'student'
         });
 
+        await logActivity({
+            user: req.user.name || 'Admin',
+            action: 'Created Student',
+            module: 'students',
+            details: `Created new student: ${student.name}`,
+            ipAddress: req.ip
+        });
+
         const responseData = student.toObject();
         if (generatedPassword) {
             responseData.generatedPassword = generatedPassword;
@@ -137,6 +146,14 @@ router.patch('/:id', auth, async (req, res) => {
             title: 'Student Profile Updated',
             message: `${student.name} updated their profile`,
             type: 'student'
+        });
+
+        await logActivity({
+            user: req.user.name || 'Admin',
+            action: 'Updated Student Record',
+            module: 'students',
+            details: `Updated details for student: ${student.name}`,
+            ipAddress: req.ip
         });
 
         res.send(student);

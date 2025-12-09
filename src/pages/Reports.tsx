@@ -323,7 +323,7 @@ export default function Reports() {
       </Card>
 
       {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
@@ -386,7 +386,7 @@ export default function Reports() {
       </div>
 
       {/* Charts */}
-      <div className="grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
         {/* Revenue Trend */}
         <Card id="revenue-chart">
           <CardHeader>
@@ -516,7 +516,7 @@ export default function Reports() {
           <CardDescription>Download predefined reports</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
             <Button variant="outline" className="justify-start" onClick={() => handleExport("Payment Summary")}>
               <Download className="h-4 w-4 mr-2" />
               Payment Summary (PDF)

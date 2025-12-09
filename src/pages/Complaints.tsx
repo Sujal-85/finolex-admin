@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -31,16 +32,17 @@ interface Complaint {
   studentProfilePicture?: string;
   studentRollNumber?: string;
   studentHostel?: string;
-  studentHostel?: string;
+
   studentRoom?: string;
   image?: string;
 }
 
 export default function Complaints() {
+  const [searchParams] = useSearchParams();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [selectedComplaint, setSelectedComplaint] = useState<Complaint | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
   const [activeTab, setActiveTab] = useState("all");
@@ -54,6 +56,13 @@ export default function Complaints() {
     const interval = setInterval(fetchComplaints, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const query = searchParams.get("search");
+    if (query) {
+      setSearchTerm(query);
+    }
+  }, [searchParams]);
 
   const fetchComplaints = async () => {
     try {
@@ -217,7 +226,7 @@ export default function Complaints() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardContent className="pt-6">
             <div className="space-y-2">
@@ -264,21 +273,21 @@ export default function Complaints() {
             </TabsList>
           </Tabs>
 
-          <div className="flex flex-wrap gap-4 mt-4">
-            <div className="flex-1 min-w-[200px]">
+          <div className="grid grid-cols-2 md:flex md:flex-row gap-4 mt-4">
+            <div className="col-span-2 md:flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Search complaints..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 w-full"
                 />
               </div>
             </div>
 
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full md:w-[150px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
@@ -291,7 +300,7 @@ export default function Complaints() {
             </Select>
 
             <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full md:w-[150px]">
                 <SelectValue placeholder="Priority" />
               </SelectTrigger>
               <SelectContent>
