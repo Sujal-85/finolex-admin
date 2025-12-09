@@ -47,7 +47,7 @@ export default function Login() {
 
   return (
     <div
-      className="flex min-h-screen items-center justify-center relative overflow-hidden"
+      className="flex min-h-screen items-center justify-center relative overflow-hidden px-4"
       style={{
         backgroundImage: `url('/college.png')`,
         backgroundSize: "cover",
@@ -83,7 +83,7 @@ export default function Login() {
           <div className="mx-auto flex h-20 w-20 items-center justify-center">
             {/* <UtensilsCrossed className="h-10 w-10 text-gray-900 drop-shadow-lg" />
              */}
-            <img src="logo.png" alt="Logo" className="h-22 w-22 text-gray-900 drop-shadow-lg rounded-2xl"/>
+            <img src="logo.png" alt="Logo" className="h-22 w-22 text-gray-900 drop-shadow-lg rounded-2xl" />
           </div>
 
           <div className="space-y-2">

@@ -9,6 +9,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Badge } from "@/components/ui/badge";
@@ -26,13 +33,14 @@ export function TopNavbar() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [isRefreshing, setIsRefreshing] = useState(false);
+
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchCategory, setSearchCategory] = useState("students");
   const [activeDialog, setActiveDialog] = useState<"student" | "payment" | "announcement" | null>(null);
 
   const handleSearch = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
-      toast.info(`Searching for: ${searchQuery}`);
-      // In a real app, this would trigger a search or navigate to a search results page
+      navigate(`/${searchCategory}?search=${encodeURIComponent(searchQuery)}`);
     }
   };
 
@@ -203,15 +211,30 @@ export function TopNavbar() {
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 shadow-sm">
       <div className="flex flex-1 items-center gap-4 md:gap-4 md:flex-none">
         <SidebarTrigger />
-        <div className="relative flex-1 md:w-96 md:flex-none">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search..."
-            className="pl-9 w-64 md:w-full"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            onKeyDown={handleSearch}
-          />
+        <div className="relative flex-1 md:w-full md:max-w-2xl md:flex-none flex gap-2">
+          <Select value={searchCategory} onValueChange={setSearchCategory}>
+            <SelectTrigger className="w-[80px] md:w-[140px] h-9">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="students">Students</SelectItem>
+              <SelectItem value="payments">Payments</SelectItem>
+              <SelectItem value="transactions">Transactions</SelectItem>
+              <SelectItem value="complaints">Complaints</SelectItem>
+              <SelectItem value="feedback">Feedback</SelectItem>
+              <SelectItem value="announcements">Announcements</SelectItem>
+            </SelectContent>
+          </Select>
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder={`Search ${searchCategory}...`}
+              className="pl-9 w-full h-9"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+            />
+          </div>
         </div>
       </div>
 

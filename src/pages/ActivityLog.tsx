@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { format } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 
 interface ActivityLog {
-  id: string;
+  _id: string;
   timestamp: string;
   user: string;
   action: string;
@@ -21,86 +21,35 @@ interface ActivityLog {
   status: "success" | "failed";
 }
 
-const mockLogs: ActivityLog[] = [
-  {
-    id: "1",
-    timestamp: "2024-01-15T10:30:25",
-    user: "Admin",
-    action: "Updated Student Record",
-    module: "students",
-    details: "Modified details for student CS001",
-    ipAddress: "192.168.1.100",
-    status: "success",
-  },
-  {
-    id: "2",
-    timestamp: "2024-01-15T10:15:10",
-    user: "Admin",
-    action: "Created Announcement",
-    module: "announcements",
-    details: "Published 'Weekend Menu Update' announcement",
-    ipAddress: "192.168.1.100",
-    status: "success",
-  },
-  {
-    id: "3",
-    timestamp: "2024-01-15T09:45:33",
-    user: "Admin",
-    action: "Marked Payment as Paid",
-    module: "payments",
-    details: "Transaction TX002 status changed to paid",
-    ipAddress: "192.168.1.100",
-    status: "success",
-  },
-  {
-    id: "4",
-    timestamp: "2024-01-15T09:30:18",
-    user: "Admin",
-    action: "Updated Mess Plan",
-    module: "plans",
-    details: "Modified pricing for Standard Mess Plan",
-    ipAddress: "192.168.1.100",
-    status: "success",
-  },
-  {
-    id: "5",
-    timestamp: "2024-01-15T09:12:55",
-    user: "Admin",
-    action: "Added Menu Item",
-    module: "menu",
-    details: "Added 'Paneer Butter Masala' to Monday lunch",
-    ipAddress: "192.168.1.100",
-    status: "success",
-  },
-  {
-    id: "6",
-    timestamp: "2024-01-14T18:22:40",
-    user: "Admin",
-    action: "Resolved Complaint",
-    module: "complaints",
-    details: "Marked complaint C003 as resolved",
-    ipAddress: "192.168.1.100",
-    status: "success",
-  },
-  {
-    id: "7",
-    timestamp: "2024-01-14T16:45:12",
-    user: "Admin",
-    action: "Failed Login Attempt",
-    module: "settings",
-    details: "Invalid credentials provided",
-    ipAddress: "203.0.113.45",
-    status: "failed",
-  },
-];
+
+
+import api from "@/api/client";
 
 export default function ActivityLog() {
-  const [logs, setLogs] = useState<ActivityLog[]>(mockLogs);
+  const [logs, setLogs] = useState<ActivityLog[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [moduleFilter, setModuleFilter] = useState("all");
   const [actionFilter, setActionFilter] = useState("all");
   const [selectedLog, setSelectedLog] = useState<ActivityLog | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+
+  useEffect(() => {
+    fetchLogs();
+  }, []);
+
+  const fetchLogs = async () => {
+    try {
+      const response = await api.get('/activity-logs');
+      setLogs(response.data);
+    } catch (error) {
+      console.error("Error fetching logs:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch activity logs",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredLogs = logs.filter(log => {
     const matchesSearch = log.user.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -252,7 +201,7 @@ export default function ActivityLog() {
               </TableHeader>
               <TableBody>
                 {filteredLogs.map((log) => (
-                  <TableRow key={log.id}>
+                  <TableRow key={log._id}>
                     <TableCell className="font-mono text-xs whitespace-nowrap">
                       {format(new Date(log.timestamp), "MMM dd, HH:mm")}
                     </TableCell>

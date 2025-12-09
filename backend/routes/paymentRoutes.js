@@ -2,6 +2,7 @@ const express = require('express');
 const Payment = require('../models/Payment');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
+const logActivity = require('../utils/activityLogger');
 const router = express.Router();
 
 const mongoose = require('mongoose');
@@ -33,6 +34,14 @@ router.post('/', auth, async (req, res) => {
             title: 'New Payment Received',
             message: `Received ₹${payment.amount} from ${payment.studentName}`,
             type: 'payment'
+        });
+
+        await logActivity({
+            user: req.user.name || 'Admin',
+            action: 'Processed Payment',
+            module: 'payments',
+            details: `Processed payment of ₹${payment.amount} for ${payment.studentName}`,
+            ipAddress: req.ip
         });
 
         // Create transaction record

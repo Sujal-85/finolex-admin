@@ -62,6 +62,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/activity-logs', require('./routes/activityLogRoutes'));
 
 // Base route
 app.get('/', (req, res) => {
