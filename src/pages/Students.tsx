@@ -29,7 +29,7 @@ interface Student {
   _id: string;
   name: string;
   email: string;
-  birthday?: string;
+  dob?: string;
   year: string;
   hostelDetails: {
     hostelName: string;
@@ -80,13 +80,13 @@ export default function Students() {
       return;
     }
 
-    const headers = ["Name", "Birthday", "Email", "Year", "Hostel", "Status", "Balance"];
+    const headers = ["Name", "DOB", "Email", "Year", "Hostel", "Status", "Balance"];
     const csvContent = [
       headers.join(","),
       ...students.map(student => [
         `"${student.name}"`,
         `"${student.name}"`,
-        student.birthday ? format(new Date(student.birthday), "MMM dd, yyyy") : "-",
+        student.dob ? format(new Date(student.dob), "MMM dd, yyyy") : "-",
         student.email,
         student.year,
         student.hostelDetails?.hostelName || '',
@@ -223,7 +223,7 @@ export default function Students() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Student</TableHead>
-                  <TableHead>Birthday</TableHead>
+                  <TableHead>DOB</TableHead>
                   <TableHead>Password</TableHead>
                   <TableHead>Year</TableHead>
                   <TableHead>Hostel</TableHead>
@@ -259,7 +259,7 @@ export default function Students() {
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">
-                      {student.birthday ? format(new Date(student.birthday), "MMM dd, yyyy") : "-"}
+                      {student.dob ? format(new Date(student.dob), "MMM dd, yyyy") : "-"}
                     </TableCell>
                     <TableCell className="font-mono text-sm text-blue-600 font-bold">
                       {newlyCreatedPasswords[student._id] || student.generatedPassword || "-"}
@@ -273,7 +273,7 @@ export default function Students() {
                     </TableCell>
                     <TableCell>{student.hostelDetails?.hostelName}</TableCell>
                     <TableCell>
-                      <StatusBadge status={student.status === 'Active' ? 'active' : 'inactive'} />
+                      <StatusBadge status={student.status === 'Inactive' ? 'inactive' : 'active'} />
                     </TableCell>
                     <TableCell className="text-right font-semibold">
                       {student.balance > 0 ? (

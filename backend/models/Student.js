@@ -7,7 +7,7 @@ const studentSchema = new mongoose.Schema({
     rollNo: { type: String, unique: true }, // Changed from rollNumber, removed required
     department: { type: String, required: true },
     year: { type: String, required: true },
-    birthday: { type: Date }, // Added birthday field
+    dob: { type: Date }, // Changed from birthday to dob to match DB
     hostelDetails: {
         hostelName: { type: String },
         roomNo: { type: String }

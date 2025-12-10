@@ -39,7 +39,7 @@ interface Student {
   currentPlan?: string;
   createdAt: string;
   profileImage?: string;
-  birthday?: string;
+  dob?: string;
 }
 
 export default function StudentDetail() {
@@ -137,7 +137,7 @@ export default function StudentDetail() {
       doc.setFontSize(18);
       doc.setTextColor(41, 128, 185); // Primary Blue
       doc.text("Finolex Academy of Management & Technology", 115, 20, { align: "center" });
-      
+
       doc.setFontSize(14);
       doc.setTextColor(100);
       doc.text("Student Profile Report", 115, 28, { align: "center" });
@@ -222,19 +222,19 @@ export default function StudentDetail() {
       // -- Footer (Signature) --
       const pageCount = (doc as any).internal.getNumberOfPages();
       const finalY = (doc as any).lastAutoTable.finalY || yPos + 50;
-      
+
       if (finalY > doc.internal.pageSize.height - 60) {
-         doc.addPage();
+        doc.addPage();
       }
-      
-      const signatureY = doc.internal.pageSize.height - 50; 
-      
+
+      const signatureY = doc.internal.pageSize.height - 50;
+
       doc.setFontSize(11);
       doc.setTextColor(0);
       doc.text("Authorized Signature:", 140, signatureY - 15);
 
       if (signatureImg) {
-         doc.addImage(signatureImg, 'PNG', 140, signatureY - 10, 40, 20);
+        doc.addImage(signatureImg, 'PNG', 140, signatureY - 10, 40, 20);
       }
 
       doc.text("MR. Sandeep Tambe", 140, signatureY + 15);
@@ -268,7 +268,7 @@ export default function StudentDetail() {
     try {
       await api.patch(`/students/${student._id}`, { status: 'Inactive' });
       toast.success("Student deactivated successfully");
-      fetchStudent(); 
+      fetchStudent();
     } catch (error) {
       toast.error("Failed to deactivate student");
     }
@@ -332,7 +332,7 @@ export default function StudentDetail() {
                   {student.rollNo}
                 </p>
               </div>
-              <StatusBadge status={student.status === 'Active' ? 'active' : 'inactive'} />
+              <StatusBadge status={student.status === 'Inactive' ? 'inactive' : 'active'} />
             </div>
 
             <div className="mt-6 space-y-4">
@@ -346,10 +346,10 @@ export default function StudentDetail() {
                   <span>{student.phone}</span>
                 </div>
               )}
-              {student.birthday && (
+              {student.dob && (
                 <div className="flex items-center gap-3 text-sm">
-                  <span className="text-muted-foreground">Birthday:</span>
-                  <span>{new Date(student.birthday).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                  <span className="text-muted-foreground">DOB:</span>
+                  <span>{new Date(student.dob).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' })}</span>
                 </div>
               )}
             </div>

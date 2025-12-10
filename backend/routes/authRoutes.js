@@ -25,7 +25,7 @@ router.post('/login', async (req, res) => {
         if (!user || !(await user.comparePassword(password))) {
             return res.status(401).send({ error: 'Invalid login credentials' });
         }
-        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET);
+        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
         await logActivity({
             user: user.name,
@@ -50,7 +50,11 @@ router.post('/student/login', async (req, res) => {
         if (!student || !(await student.comparePassword(password))) {
             return res.status(401).send({ error: 'Invalid login credentials' });
         }
-        const token = jwt.sign({ userId: student._id, role: 'student' }, process.env.JWT_SECRET);
+
+        if (student.status === 'Inactive') {
+            return res.status(403).send({ error: 'Account is inactive. Please contact admin.' });
+        }
+        const token = jwt.sign({ userId: student._id, role: 'student' }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
         await logActivity({
             user: student.name,
