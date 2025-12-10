@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+require('dotenv').config({ path: './backend/.env' });
 const Student = require('./models/Student');
 const Plan = require('./models/Plan');
 
@@ -8,13 +8,9 @@ const checkState = async () => {
         await mongoose.connect(process.env.MONGODB_URI);
         console.log('Connected to MongoDB');
 
-        const plans = await Plan.find();
-        console.log('--- PLANS ---');
-        console.log(JSON.stringify(plans, null, 2));
-
-        const student = await Student.findOne();
-        console.log('--- SAMPLE STUDENT ---');
-        console.log(JSON.stringify(student, null, 2));
+        const students = await Student.find({}, 'name birthday email').limit(5);
+        console.log('--- STUDENTS (Name, Birthday, Email) ---');
+        console.log(JSON.stringify(students, null, 2));
 
         process.exit(0);
     } catch (error) {

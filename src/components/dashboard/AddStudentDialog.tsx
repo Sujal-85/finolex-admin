@@ -27,7 +27,7 @@ interface Student {
     _id: string;
     name: string;
     email: string;
-    birthday?: string;
+    dob?: string;
     year: string;
     hostelDetails: {
         hostelName: string;
@@ -55,7 +55,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
 
     // Form state
     const [name, setName] = useState("");
-    const [birthday, setBirthday] = useState("");
+    const [dob, setDob] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
     const [roomNo, setRoomNo] = useState("");
@@ -67,7 +67,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
         if (studentToEdit) {
             setName(studentToEdit.name);
             // @ts-ignore
-            setBirthday(studentToEdit.birthday ? new Date(studentToEdit.birthday).toISOString().split('T')[0] : "");
+            setDob(studentToEdit.dob ? new Date(studentToEdit.dob).toISOString().split('T')[0] : "");
             setEmail(studentToEdit.email);
             // @ts-ignore
             setPhone(studentToEdit.phone || "");
@@ -82,7 +82,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
             // Reset form when not editing
             if (!open) {
                 setName("");
-                setBirthday("");
+                setDob("");
                 setEmail("");
                 setPhone("");
                 setRoomNo("");
@@ -99,7 +99,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
 
         const studentData = {
             name,
-            birthday,
+            dob,
             email,
             phone,
             year: 'First',
@@ -171,15 +171,15 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                             />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="birthday" className="text-right">
-                                Birthday
+                            <Label htmlFor="dob" className="text-right">
+                                Date of Birth
                             </Label>
                             <Input
-                                id="birthday"
-                                name="birthday"
+                                id="dob"
+                                name="dob"
                                 type="date"
-                                value={birthday}
-                                onChange={(e) => setBirthday(e.target.value)}
+                                value={dob}
+                                onChange={(e) => setDob(e.target.value)}
                                 className="col-span-3"
                                 required
                             />
