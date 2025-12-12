@@ -246,7 +246,7 @@ export default function Dashboard() {
                         {complaint.studentName} • {new Date(complaint.createdAt).toLocaleDateString()}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-2">
+                    <div className="flex flex-col items-end gap-3">
                       <StatusBadge status={complaint.status.toLowerCase()} />
                       <span
                         className={`text-xs font-medium ${complaint.priority === "High"

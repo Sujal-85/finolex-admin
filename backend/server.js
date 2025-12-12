@@ -44,7 +44,13 @@ app.use((req, res, next) => {
 
 // Database Connection
 mongoose.connect(process.env.MONGODB_URI)
-    .then(() => console.log('Connected to MongoDB'))
+    .then(async () => {
+        console.log('Connected to MongoDB');
+        // Auto-fix indexes to remove ghosts like 'username'
+        const User = require('./models/User');
+        await User.syncIndexes();
+        console.log('User Indexes Synced');
+    })
     .catch((err) => console.error('MongoDB connection error:', err));
 
 // Routes
@@ -54,6 +60,7 @@ app.use('/api/menu', menuRoutes);
 app.use('/api/inventory', inventoryRoutes);
 app.use('/api/complaints', complaintRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/upload', require('./routes/uploadRoutes'));
 app.use('/api/announcements', announcementRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/stats', statsRoutes);
@@ -62,6 +69,9 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/orders', require('./routes/orderRoutes'));
+app.use('/api/coupons', require('./routes/couponRoutes'));
+app.use('/api/settlements', require('./routes/settlementRoutes'));
 app.use('/api/activity-logs', require('./routes/activityLogRoutes'));
 
 // Base route

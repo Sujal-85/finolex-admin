@@ -211,31 +211,34 @@ export function TopNavbar() {
     <header className="sticky top-0 z-10 flex h-16 items-center justify-between border-b bg-card px-4 md:px-6 shadow-sm">
       <div className="flex flex-1 items-center gap-4 md:gap-4 md:flex-none">
         <SidebarTrigger />
-        <div className="relative flex-1 md:w-full md:max-w-2xl md:flex-none flex gap-2">
-          <Select value={searchCategory} onValueChange={setSearchCategory}>
-            <SelectTrigger className="w-[80px] md:w-[140px] h-9">
-              <SelectValue placeholder="Category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="students">Students</SelectItem>
-              <SelectItem value="payments">Payments</SelectItem>
-              <SelectItem value="transactions">Transactions</SelectItem>
-              <SelectItem value="complaints">Complaints</SelectItem>
-              <SelectItem value="feedback">Feedback</SelectItem>
-              <SelectItem value="announcements">Announcements</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              placeholder={`Search ${searchCategory}...`}
-              className="pl-9 w-full h-9"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              onKeyDown={handleSearch}
-            />
+        {/* Only show Search and Quick Actions if NOT Admin (or if role is Manager) */}
+        {(localStorage.getItem('user') && JSON.parse(localStorage.getItem('user') || '{}').role === 'manager') && (
+          <div className="relative flex-1 md:w-full md:max-w-2xl md:flex-none flex gap-2">
+            <Select value={searchCategory} onValueChange={setSearchCategory}>
+              <SelectTrigger className="w-[80px] md:w-[140px] h-9">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="students">Students</SelectItem>
+                <SelectItem value="payments">Payments</SelectItem>
+                <SelectItem value="transactions">Transactions</SelectItem>
+                <SelectItem value="complaints">Complaints</SelectItem>
+                <SelectItem value="feedback">Feedback</SelectItem>
+                <SelectItem value="announcements">Announcements</SelectItem>
+              </SelectContent>
+            </Select>
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                placeholder={`Search ${searchCategory}...`}
+                className="pl-9 w-full h-9"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={handleSearch}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
@@ -277,29 +280,32 @@ export function TopNavbar() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center gap-2">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-2">
-                <Plus className="h-4 w-4" />
-                Quick Add
-                <ChevronDown className="h-3 w-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={() => setActiveDialog("student")}>
-                Add Student
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setActiveDialog("payment")}>
-                Record Payment
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setActiveDialog("announcement")}>
-                Create Announcement
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/menu")}>
-                Add Menu Item
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+
+          {(localStorage.getItem('user') && JSON.parse(localStorage.getItem('user') || '{}').role === 'manager') && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Plus className="h-4 w-4" />
+                  Quick Add
+                  <ChevronDown className="h-3 w-3" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => setActiveDialog("student")}>
+                  Add Student
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveDialog("payment")}>
+                  Record Payment
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setActiveDialog("announcement")}>
+                  Create Announcement
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/menu")}>
+                  Add Menu Item
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           <Button
             variant="ghost"

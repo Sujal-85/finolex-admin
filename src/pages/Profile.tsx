@@ -52,50 +52,57 @@ export default function Profile() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            // Check file size (limit to 2MB initial check)
-            if (file.size > 2 * 1024 * 1024) {
-                toast.error("Image is too large. Please select an image under 2MB.");
+            // Check file size (limit to 5MB)
+            if (file.size > 5 * 1024 * 1024) {
+                toast.error("Image is too large. Please select an image under 5MB.");
                 return;
             }
 
-            const reader = new FileReader();
-            reader.onloadend = (e) => {
-                const img = new Image();
-                img.src = e.target?.result as string;
-                img.onload = () => {
-                    // Resize image to max 200x200
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
+            const formData = new FormData();
+            formData.append('avatar', file);
 
-                    const maxSize = 200;
-                    let width = img.width;
-                    let height = img.height;
+            const toastId = toast.loading("Uploading avatar...");
 
-                    if (width > height) {
-                        if (width > maxSize) {
-                            height *= maxSize / width;
-                            width = maxSize;
-                        }
-                    } else {
-                        if (height > maxSize) {
-                            width *= maxSize / height;
-                            height = maxSize;
-                        }
+            try {
+                // Determine API base URL (handling localhost vs relative)
+                // Using api/client if available or direct fetch with token
+                const token = localStorage.getItem('token');
+
+                const response = await fetch('http://localhost:5000/api/upload/avatar', {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                        // Content-Type is auto-set by browser for FormData
                     }
+                });
 
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx?.drawImage(img, 0, 0, width, height);
+                if (!response.ok) {
+                    throw new Error("Upload failed");
+                }
 
-                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7); // Compress to JPEG with 0.7 quality
-                    setAvatarUrl(compressedBase64);
-                    toast.success("Avatar updated successfully!");
-                };
-            };
-            reader.readAsDataURL(file);
+                const data = await response.json();
+
+                // Update state
+                setAvatarUrl(data.avatar);
+                const updatedUser = { ...user, avatar: data.avatar };
+                setUser(updatedUser);
+
+                // Update local storage
+                localStorage.setItem('user', JSON.stringify(updatedUser));
+
+                // Dispatch event
+                window.dispatchEvent(new Event('userUpdated'));
+
+                toast.success("Avatar uploaded and profile updated!", { id: toastId });
+
+            } catch (error) {
+                console.error("Upload error:", error);
+                toast.error("Failed to upload avatar", { id: toastId });
+            }
         }
     };
 

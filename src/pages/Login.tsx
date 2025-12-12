@@ -19,6 +19,7 @@ export default function Login() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [role, setRole] = useState("admin");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -28,7 +29,7 @@ export default function Login() {
 
     try {
       const endpoint = isLogin ? '/auth/login' : '/auth/register';
-      const payload = isLogin ? { email, password } : { name, email, password, role: 'admin' };
+      const payload = isLogin ? { email, password } : { name, email, password, role };
 
       const response = await api.post(endpoint, payload);
       const { token, user } = response.data;
@@ -37,7 +38,12 @@ export default function Login() {
       localStorage.setItem('user', JSON.stringify(user));
 
       toast.success(isLogin ? "Login successful!" : "Registration successful!");
-      navigate("/dashboard");
+
+      if (user.role === 'manager') {
+        navigate("/dashboard"); // Manager gets the full dashboard
+      } else {
+        navigate("/admin/dashboard"); // Admin gets the specific dashboard
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.error || (isLogin ? "Invalid credentials" : "Registration failed"));
     } finally {
@@ -114,6 +120,25 @@ export default function Login() {
                              focus:bg-white/70 focus:border-white/60 focus:ring-4 focus:ring-white/30 
                              backdrop-blur-md transition-all duration-300 text-base font-medium"
                 />
+              </div>
+            )}
+
+            {!isLogin && (
+              <div className="space-y-3">
+                <Label htmlFor="role" className="text-gray-900 text-sm font-bold tracking-wide">
+                  Role
+                </Label>
+                <select
+                  id="role"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="w-full h-12 px-3 bg-white/50 border border-white/40 text-gray-900 rounded-md
+                             focus:bg-white/70 focus:border-white/60 focus:ring-4 focus:ring-white/30 
+                             backdrop-blur-md transition-all duration-300 text-base font-medium outline-none"
+                >
+                  <option value="admin">Admin</option>
+                  <option value="manager">Manager</option>
+                </select>
               </div>
             )}
 
