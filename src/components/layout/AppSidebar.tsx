@@ -25,29 +25,49 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-const mainNavItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Students", url: "/students", icon: Users },
-  { title: "Payments", url: "/payments", icon: CreditCard },
-  { title: "Transactions", url: "/transactions", icon: Receipt },
-  { title: "Plans & Pricing", url: "/plans", icon: Tag },
-];
-
-const managementItems = [
-  { title: "Menu", url: "/menu", icon: UtensilsCrossed },
-  { title: "Announcements", url: "/announcements", icon: Megaphone },
-  { title: "Complaints", url: "/complaints", icon: MessageSquare },
-  { title: "Feedback", url: "/feedback", icon: Star },
-];
-
-const systemItems = [
-  { title: "Reports", url: "/reports", icon: BarChart3 },
-  { title: "Activity Log", url: "/activity", icon: FileText },
-  { title: "Settings", url: "/settings", icon: Settings },
-];
-
 export function AppSidebar() {
   const { open, setOpenMobile, isMobile } = useSidebar();
+
+  // Dynamic role check on render
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const role = user.role || 'admin';
+
+  const mainNavItems = role === 'manager' ? [
+    // Manager (Canteen Owner) - Needs Full Access
+    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+    { title: "Students", url: "/students", icon: Users },
+    { title: "Payments", url: "/payments", icon: CreditCard },
+    { title: "Settlement", url: "/settlement", icon: CreditCard },
+    { title: "Transactions", url: "/transactions", icon: Receipt },
+    { title: "Plans & Pricing", url: "/plans", icon: Tag },
+  ] : [
+    // Admin (College Staff) - Limited View (Orders & Settlement only)
+    { title: "Admin Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+    { title: "Mess Orders", url: "/admin/orders", icon: UtensilsCrossed },
+    { title: "Settlement", url: "/settlement", icon: CreditCard },
+  ];
+
+  const managementItems = role === 'manager' ? [
+    // Manager (Canteen Owner) - Needs Full Access
+    { title: "Mess Orders", url: "/admin/orders", icon: UtensilsCrossed }, // They need to see/act on orders
+    { title: "Menu", url: "/menu", icon: UtensilsCrossed },
+    { title: "Announcements", url: "/announcements", icon: Megaphone },
+    { title: "Complaints", url: "/complaints", icon: MessageSquare },
+    { title: "Feedback", url: "/feedback", icon: Star },
+    { title: "Inventory", url: "/inventory", icon: UtensilsCrossed }, // Assuming Inventory exists or should be here
+  ] : [
+    // Admin (College Staff) - Restricted
+  ];
+
+  const systemItems = role === 'manager' ? [
+    // Manager (Canteen Owner) - Needs Full Access
+    { title: "Reports", url: "/reports", icon: BarChart3 },
+    { title: "Activity Log", url: "/activity", icon: FileText },
+    { title: "Settings", url: "/settings", icon: Settings },
+  ] : [
+    // Admin (College Staff) - Restricted
+    { title: "Settings", url: "/settings", icon: Settings },
+  ];
 
   const handleLinkClick = () => {
     if (isMobile) {
@@ -61,12 +81,16 @@ export function AppSidebar() {
         <div className="flex items-center gap-2 px-4 py-4">
           <div className="flex items-center justify-center rounded-lg">
             {/* <UtensilsCrossed className="h-4 w-4 text-primary-foreground" /> */}
-            <img src="/logo.png" className="rounded-full w-12 h-18"></img>
+            <img
+              src={role === 'manager' ? "/logo.png" : "/famt-logo.png"}
+              className={`rounded-full w-12 h-18 ${role !== 'manager' ? 'rounded-xl bg-white w-14 h-18' : ''}`}
+              alt="Logo"
+            />
           </div>
           {open && (
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-sidebar-foreground">
-                Canteen Admin
+                {role === 'manager' ? 'Canteen Admin' : 'FAMT Admin'}
               </span>
             </div>
           )}

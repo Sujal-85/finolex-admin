@@ -25,6 +25,11 @@ import SettingsPage from "./pages/Settings";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { ChatAssistant } from "./components/ChatAssistant";
+import AdminOrders from "./pages/AdminOrders";
+import CreateOrder from "./pages/CreateOrder";
+import OrderDetails from "./pages/OrderDetails";
+import AdminDashboard from "./pages/AdminDashboard";
+import Settlement from "./pages/Settlement";
 
 const queryClient = new QueryClient();
 
@@ -71,6 +76,11 @@ const App = () => {
                 <Route path="/activity" element={<ActivityLog />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/admin/orders" element={<AdminOrders />} />
+                <Route path="/admin/create-order" element={<CreateOrder />} />
+                <Route path="/admin/orders/:id" element={<OrderDetails />} />
+                <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                <Route path="/settlement" element={<Settlement />} />
                 <Route path="*" element={<NotFound />} />
               </Route>
               <Route path="*" element={<NotFound />} />
