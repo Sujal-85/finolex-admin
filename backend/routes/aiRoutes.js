@@ -78,7 +78,7 @@ router.post('/schedule-announcement', async (req, res) => {
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         // Using a reliable model
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
         const systemPrompt = `
         You are a smart assistant for a Canteen Management System.

@@ -53,7 +53,7 @@ mongoose.connect(process.env.MONGODB_URI)
     })
     .catch((err) => console.error('MongoDB connection error:', err));
 
-// Routes
+console.log('Registering Routes...');
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/menu', menuRoutes);
@@ -71,6 +71,8 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/transactions', transactionRoutes);
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
+
+console.log('Loading Settlement Routes...');
 app.use('/api/settlements', require('./routes/settlementRoutes'));
 app.use('/api/activity-logs', require('./routes/activityLogRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
