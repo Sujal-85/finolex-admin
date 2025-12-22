@@ -7,7 +7,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Users, Check } from "lucide-react";
+import { Plus, Edit, Trash2, Users, Check, FileText, Eye, Upload, ExternalLink } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import api from "@/api/client";
 import { Loader } from "@/components/ui/loader";
@@ -20,6 +20,9 @@ interface Plan {
   features: string[];
   active: boolean;
   subscriberCount: number;
+  startDate?: string;
+  endDate?: string;
+  rebatePdfUrl?: string;
 }
 
 export default function Plans() {
@@ -33,8 +36,13 @@ export default function Plans() {
     type: "basic" as Plan["type"],
     price: "",
     features: "",
+    startDate: "",
+    endDate: "",
+    rebatePdfUrl: "",
   });
-  const [isLoading, setIsLoading] = useState(true); // Add isLoading state
+  const [isUploading, setIsUploading] = useState(false);
+  const [activePdfUrl, setActivePdfUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchPlans();
@@ -55,15 +63,9 @@ export default function Plans() {
     }
   };
 
-
-
-  if (isLoading) {
-    return <Loader />;
-  }
-
   const handleAddNew = () => {
     setEditingPlan(null);
-    setFormData({ name: "", type: "basic", price: "", features: "" });
+    setFormData({ name: "", type: "basic", price: "", features: "", startDate: "", endDate: "", rebatePdfUrl: "" });
     setShowModal(true);
   };
 
@@ -74,6 +76,9 @@ export default function Plans() {
       type: plan.type,
       price: plan.price.toString(),
       features: plan.features.join(", "),
+      startDate: plan.startDate ? new Date(plan.startDate).toISOString().split('T')[0] : "",
+      endDate: plan.endDate ? new Date(plan.endDate).toISOString().split('T')[0] : "",
+      rebatePdfUrl: plan.rebatePdfUrl || "",
     });
     setShowModal(true);
   };
@@ -94,6 +99,9 @@ export default function Plans() {
       type: formData.type,
       price: Number(formData.price),
       features,
+      startDate: formData.startDate || undefined,
+      endDate: formData.endDate || undefined,
+      rebatePdfUrl: formData.rebatePdfUrl || undefined,
     };
 
     try {
@@ -112,6 +120,42 @@ export default function Plans() {
         description: "Failed to save plan",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type !== "application/pdf") {
+      toast({
+        title: "Invalid File",
+        description: "Please upload a PDF file only.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const uploadData = new FormData();
+    uploadData.append("pdf", file);
+
+    setIsUploading(true);
+    try {
+      const response = await api.post("/upload/rebate-pdf", uploadData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      // Prefer secure_url if provided by Cloudinary SDK through backend
+      const pdfUrl = response.data.pdfUrl.trim();
+      setFormData({ ...formData, rebatePdfUrl: pdfUrl });
+      toast({ title: "Upload Success", description: "Rebate PDF uploaded successfully." });
+    } catch (error) {
+      toast({
+        title: "Upload Failed",
+        description: "Failed to upload Rebate PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -168,6 +212,10 @@ export default function Plans() {
     return <Badge variant={variants[type] as any}>{type.charAt(0).toUpperCase() + type.slice(1)}</Badge>;
   };
 
+  if (isLoading) {
+    return <Loader />;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -213,6 +261,13 @@ export default function Plans() {
                 <p className="text-sm text-muted-foreground">per month</p>
               </div>
 
+              {plan.startDate && plan.endDate && (
+                <div className="text-xs text-muted-foreground bg-muted p-2 rounded-md">
+                  <p className="font-semibold">Working Period:</p>
+                  <p>{new Date(plan.startDate).toLocaleDateString()} - {new Date(plan.endDate).toLocaleDateString()}</p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 {plan.features.map((feature, idx) => (
                   <div key={idx} className="flex items-center gap-2">
@@ -222,16 +277,29 @@ export default function Plans() {
                 ))}
               </div>
 
-              <div className="flex items-center gap-2 pt-2 border-t">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">
-                  {plan.subscriberCount} subscribers
-                </span>
+              <div className="flex items-center justify-between pt-2 border-t">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">
+                    {plan.subscriberCount} subscribers
+                  </span>
+                </div>
+                {plan.rebatePdfUrl && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-2 h-8 px-2 text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                    onClick={() => setActivePdfUrl(plan.rebatePdfUrl || null)}
+                  >
+                    <Eye className="h-4 w-4" />
+                    <span className="text-xs font-medium">Rebate Info</span>
+                  </Button>
+                )}
               </div>
             </CardContent>
             <CardFooter>
               <div className="flex items-center justify-between w-full">
-                <Label htmlFor={`active-${plan._id}`}>Active</Label>
+                <Label htmlFor={`active-${plan._id}`}>Active Status</Label>
                 <Switch
                   id={`active-${plan._id}`}
                   checked={plan.active}
@@ -274,6 +342,27 @@ export default function Plans() {
               />
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="startDate">Start Date</Label>
+                <Input
+                  id="startDate"
+                  type="date"
+                  value={formData.startDate}
+                  onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="endDate">End Date</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                />
+              </div>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="features">Features (comma-separated)</Label>
               <Textarea
@@ -281,18 +370,120 @@ export default function Plans() {
                 value={formData.features}
                 onChange={(e) => setFormData({ ...formData, features: e.target.value })}
                 placeholder="Breakfast, Lunch, Dinner, Weekend Specials"
-                rows={4}
+                rows={3}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Rebate Policy PDF</Label>
+              {formData.rebatePdfUrl ? (
+                <div className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <FileText className="h-4 w-4 text-blue-500 shrink-0" />
+                    <span className="text-xs truncate max-w-[150px]">Rebate_Policy.pdf</span>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setActivePdfUrl(formData.rebatePdfUrl)}
+                      className="h-8 w-8 p-0"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                      onClick={() => setFormData({ ...formData, rebatePdfUrl: "" })}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid w-full items-center gap-1.5">
+                  <Input
+                    id="rebatePdf"
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileUpload}
+                    className="cursor-pointer"
+                    disabled={isUploading}
+                  />
+                  {isUploading && <p className="text-xs text-muted-foreground animate-pulse">Uploading...</p>}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave}>
+            <Button onClick={handleSave} disabled={isUploading}>
               {editingPlan ? "Update" : "Create"} Plan
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* PDF Preview Modal */}
+      <Dialog open={!!activePdfUrl} onOpenChange={(open) => !open && setActivePdfUrl(null)}>
+        <DialogContent className="max-w-4xl w-[90vw] h-[90vh] p-0 flex flex-col">
+          <DialogHeader className="p-4 border-b flex-row items-center justify-between space-y-0">
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-blue-500" />
+              Rebate Policy Preview
+            </DialogTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="mr-6"
+            >
+              <a href={activePdfUrl || "#"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" />
+                Full Screen
+              </a>
+            </Button>
+          </DialogHeader>
+          <div className="flex-1 w-full overflow-hidden bg-slate-50 flex flex-col items-center justify-center p-0 relative min-h-[400px]">
+            {activePdfUrl ? (
+              <>
+                <iframe
+                  key={activePdfUrl}
+                  src={activePdfUrl}
+                  className="w-full h-full border-none relative z-10"
+                  title="PDF Preview"
+                />
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 z-0">
+                  <FileText className="h-10 w-10 text-slate-300 mb-2" />
+                  <p className="text-sm text-slate-500 mb-4 px-6 text-center">
+                    If the preview doesn't load, your browser might be blocking it.
+                  </p>
+                  <div className="flex gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <a href={activePdfUrl} target="_blank" rel="noopener noreferrer">
+                        <ExternalLink className="h-4 w-4 mr-2" />
+                        Open in New Tab
+                      </a>
+                    </Button>
+                    <Button asChild variant="default" size="sm">
+                      <a href={activePdfUrl} download="Rebate_Policy.pdf" className="flex items-center gap-2">
+                        <Upload className="h-4 w-4 rotate-180" />
+                        Download PDF
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 text-center text-muted-foreground">
+                <FileText className="h-12 w-12 opacity-20 mb-4" />
+                <p>No document selected for preview</p>
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

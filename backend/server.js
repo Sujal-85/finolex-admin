@@ -73,6 +73,8 @@ app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
 app.use('/api/settlements', require('./routes/settlementRoutes'));
 app.use('/api/activity-logs', require('./routes/activityLogRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
+
 
 // Base route
 app.get('/', (req, res) => {
@@ -91,4 +93,7 @@ io.on('connection', (socket) => {
 // Start Server
 server.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    // Initialize Scheduler
+    const initScheduler = require('./scheduler');
+    initScheduler(io);
 });

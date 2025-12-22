@@ -5,7 +5,8 @@ const multer = require('multer');
 cloudinary.config({
     cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
     api_key: process.env.CLOUDINARY_API_KEY,
-    api_secret: process.env.CLOUDINARY_API_SECRET
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+    secure: true
 });
 
 const storage = new CloudinaryStorage({
@@ -17,6 +18,16 @@ const storage = new CloudinaryStorage({
     },
 });
 
-const upload = multer({ storage: storage });
+const pdfStorage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'finolex_rebates',
+        upload_preset: 'prasanna-caterers',
+        resource_type: 'auto'
+    },
+});
 
-module.exports = { cloudinary, upload };
+const upload = multer({ storage: storage });
+const uploadPdf = multer({ storage: pdfStorage });
+
+module.exports = { cloudinary, upload, uploadPdf };

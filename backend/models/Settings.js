@@ -6,11 +6,15 @@ const settingsSchema = new mongoose.Schema({
     address: { type: String, default: "123 College Road" },
     contactEmail: { type: String, default: "mess@xyzcollege.edu" },
     contactPhone: { type: String, default: "+91-1234567890" },
+    logoUrl: { type: String },
+    departments: { type: [String], default: ["Computer", "IT", "EXTC", "Mechanical", "Civil"] },
+    serviceTypes: { type: [String], default: ["Tea & Snacks", "Lunch", "High Tea", "Dinner"] },
+
+    // Legacy / System (Optional now)
     currency: { type: String, default: "INR" },
     timezone: { type: String, default: "Asia/Kolkata" },
     dateFormat: { type: String, default: "dd/MM/yyyy" },
     language: { type: String, default: "en" },
-    logoUrl: { type: String },
     notificationSettings: {
         emailNotifications: { type: Boolean, default: true },
         smsNotifications: { type: Boolean, default: false },
