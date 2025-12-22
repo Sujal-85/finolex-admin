@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Edit, Trash2, Search, Eye, Send, Calendar, Users } from "lucide-react";
+import { Plus, Edit, Trash2, Search, Eye, Send, Calendar, Users, Star } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
@@ -35,6 +35,9 @@ export default function Announcements() {
   const [editingAnnouncement, setEditingAnnouncement] = useState<Announcement | null>(null);
   const [viewingAnnouncement, setViewingAnnouncement] = useState<Announcement | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [showAiModal, setShowAiModal] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isAiLoading, setIsAiLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState(searchParams.get("search") || "");
   const [audienceFilter, setAudienceFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -152,6 +155,39 @@ export default function Announcements() {
     }
   };
 
+  const handleAiSchedule = async () => {
+    if (!aiPrompt) return;
+    setIsAiLoading(true);
+    try {
+      const response = await api.post('/ai/schedule-announcement', { prompt: aiPrompt });
+      const data = response.data;
+
+      setFormData({
+        title: data.title,
+        content: data.content,
+        targetAudience: data.targetAudience || "All",
+        scheduledDate: data.scheduledDate ? new Date(data.scheduledDate).toISOString().slice(0, 16) : "",
+        pushNotification: true,
+      });
+
+      setEditingAnnouncement(null);
+      setShowAiModal(false);
+      setShowModal(true);
+      toast({
+        title: "AI Suggestion Generated",
+        description: "Review and publish his announcement.",
+      });
+    } catch (error) {
+      toast({
+        title: "AI Error",
+        description: "Failed to generate announcement suggestion.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (deletingId) {
       try {
@@ -204,10 +240,16 @@ export default function Announcements() {
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Announcements</h1>
           <p className="text-muted-foreground">Create and manage updates</p>
         </div>
-        <Button onClick={handleCreate} className="w-full md:w-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          Create New
-        </Button>
+        <div className="flex gap-2 w-full md:w-auto">
+          <Button variant="outline" onClick={() => setShowAiModal(true)} className="flex-1 md:flex-none">
+            <Star className="h-4 w-4 mr-2 text-yellow-500" />
+            AI Auto-Schedule
+          </Button>
+          <Button onClick={handleCreate} className="flex-1 md:flex-none">
+            <Plus className="h-4 w-4 mr-2" />
+            Create New
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -480,6 +522,40 @@ export default function Announcements() {
             </Button>
             <Button variant="destructive" onClick={handleDelete}>
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* AI Modal */}
+      <Dialog open={showAiModal} onOpenChange={setShowAiModal}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+              AI Announcement Scheduler
+            </DialogTitle>
+            <DialogDescription>
+              Tell AI what you want to announce and when.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="aiPrompt">Prompt</Label>
+              <Textarea
+                id="aiPrompt"
+                placeholder="e.g., Schedule a reminder for tomorrow's feast at 1 PM for everyone."
+                value={aiPrompt}
+                onChange={(e) => setAiPrompt(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAiModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAiSchedule} disabled={isAiLoading || !aiPrompt}>
+              {isAiLoading ? "Generating..." : "Generate Suggestion"}
             </Button>
           </DialogFooter>
         </DialogContent>

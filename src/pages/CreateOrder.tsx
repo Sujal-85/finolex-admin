@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Calendar, Users, DollarSign, MapPin } from 'lucide-react';
 
 const CreateOrder = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const prefilledData = location.state?.prefilledData;
+
     const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
@@ -18,8 +21,22 @@ const CreateOrder = () => {
         numberOfPersons: 0,
         costPerHead: 0,
         totalAmount: 0,
-        notes: ''
+        notes: '',
+        ...prefilledData // Overwrite defaults if AI provided data
     });
+
+    // Recalculate total if AI populated data
+    useEffect(() => {
+        if (prefilledData) {
+            // Optional: You could show a toast here like "AI filled the form!"
+            // Ensure numbers are numbers
+            const count = Number(prefilledData.numberOfPersons) || 0;
+            const cost = Number(prefilledData.costPerHead) || 0;
+            if (count || cost) {
+                setFormData(prev => ({ ...prev, totalAmount: count * cost }));
+            }
+        }
+    }, [prefilledData]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;

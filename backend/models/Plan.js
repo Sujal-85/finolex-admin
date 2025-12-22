@@ -6,7 +6,10 @@ const planSchema = new mongoose.Schema({
     price: { type: Number, required: true },
     features: [{ type: String }],
     active: { type: Boolean, default: true },
-    subscriberCount: { type: Number, default: 0 }
+    subscriberCount: { type: Number, default: 0 },
+    startDate: { type: Date },
+    endDate: { type: Date },
+    rebatePdfUrl: { type: String }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Plan', planSchema);

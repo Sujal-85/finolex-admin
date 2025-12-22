@@ -16,6 +16,7 @@ router.get('/', auth, async (req, res) => {
 // Create plan
 router.post('/', auth, async (req, res) => {
     try {
+        if (req.body.rebatePdfUrl) req.body.rebatePdfUrl = req.body.rebatePdfUrl.trim();
         const plan = new Plan(req.body);
         await plan.save();
         res.status(201).send(plan);
@@ -27,6 +28,7 @@ router.post('/', auth, async (req, res) => {
 // Update plan
 router.patch('/:id', auth, async (req, res) => {
     try {
+        if (req.body.rebatePdfUrl) req.body.rebatePdfUrl = req.body.rebatePdfUrl.trim();
         const plan = await Plan.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
         if (!plan) return res.status(404).send();
         res.send(plan);
