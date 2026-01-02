@@ -25,31 +25,11 @@ router.get('/', auth, async (req, res) => {
         const activePlans = plans.filter(p => p.active);
         const singleActivePlan = activePlans.length === 1 ? activePlans[0] : null;
 
-        // Calculate balance for each student
-        const studentsWithBalance = students.map(student => {
-            let planPrice = planPriceMap[student.currentPlan];
-
-            // Fallback: If student has no plan or mismatch, use the single active plan
-            if (planPrice === undefined && singleActivePlan) {
-                planPrice = singleActivePlan.price;
-            } else if (planPrice === undefined) {
-                planPrice = 0;
-            }
-
-            // Sum up payments for this student
-            const totalPaid = payments
-                .filter(p => p.studentId.toString() === student._id.toString())
-                .reduce((sum, p) => sum + p.amount, 0);
-
-            // Let's allow negative balance to indicate credit
-            const calculatedBalance = planPrice - totalPaid;
-
-            return {
-                ...student,
-                currentPlan: student.currentPlan || (singleActivePlan?.name),
-                balance: calculatedBalance
-            };
-        });
+        // Return students with their stored balance
+        const studentsWithBalance = students.map(student => ({
+            ...student,
+            currentPlan: student.currentPlan || (singleActivePlan?.name)
+        }));
 
         res.send(studentsWithBalance);
     } catch (error) {
@@ -106,27 +86,13 @@ router.get('/:id', auth, async (req, res) => {
         const student = await Student.findById(req.params.id).lean();
         if (!student) return res.status(404).send();
 
-        // Calculate balance
-        let plan = await Plan.findOne({ name: student.currentPlan }).lean();
+        // Legacy Balance Calculation REMOVED. 
+        // We now rely on stored 'balance' and 'activePlans' updated by Transaction Routes.
 
-        // Fallback: If not found, use the single active plan
-        if (!plan) {
-            const activePlans = await Plan.find({ active: true }).lean();
-            if (activePlans.length === 1) {
-                plan = activePlans[0];
-            }
-        }
-
-        const payments = await Payment.find({ studentId: student._id, status: 'Completed' }).lean();
-
-        const planPrice = plan ? plan.price : 0;
-        const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
-
-        // Calculate dynamic balance
-        student.balance = planPrice - totalPaid;
-
-        if (plan) {
-            student.currentPlan = plan.name;
+        // Optional: Populate currentPlan name just for display if needed, but do not touch balance.
+        if (student.currentPlan && !student.activePlans) {
+            // Keep existing behavior for old students? 
+            // No, better to trust the DB. 
         }
 
         res.send(student);

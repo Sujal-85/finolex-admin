@@ -1,18 +1,21 @@
 const express = require('express');
-const Transaction = require('../models/Transaction');
-const Payment = require('../models/Payment');
-const auth = require('../middleware/auth');
 const router = express.Router();
 
-// Get all transactions
+const Transaction = require('../models/Transaction');
+const Payment = require('../models/Payment');
+const Student = require('../models/Student');
+const auth = require('../middleware/auth');
+
+/* =========================================================
+   GET ALL TRANSACTIONS
+========================================================= */
 router.get('/', auth, async (req, res) => {
     try {
         const transactions = await Transaction.find()
             .sort({ date: -1 })
             .populate('studentId', 'name rollNumber hostel department');
 
-        // Ensure studentName is populated from studentId if missing
-        const enrichedTransactions = transactions.map(t => {
+        const enriched = transactions.map(t => {
             const obj = t.toObject();
             if (!obj.studentName && obj.studentId?.name) {
                 obj.studentName = obj.studentId.name;
@@ -20,93 +23,162 @@ router.get('/', auth, async (req, res) => {
             return obj;
         });
 
-        res.send(enrichedTransactions);
-    } catch (error) {
-        res.status(500).send(error);
+        res.json(enriched);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
-// Create a transaction
+/* =========================================================
+   CREATE TRANSACTION
+========================================================= */
 router.post('/', auth, async (req, res) => {
     try {
-        const transactionData = req.body;
+        const data = req.body;
 
-        // Fetch student name if not provided
-        if (!transactionData.studentName && transactionData.studentId) {
-            const Student = require('../models/Student');
-            const student = await Student.findById(transactionData.studentId);
-            if (student) {
-                transactionData.studentName = student.name;
-            }
+        if (!data.studentName && data.studentId) {
+            const student = await Student.findById(data.studentId);
+            if (student) data.studentName = student.name;
         }
 
-        const transaction = new Transaction(transactionData);
+        const transaction = new Transaction({
+            ...data,
+            status: data.status || 'Pending',
+            balanceDeducted: false
+        });
+
         await transaction.save();
-        res.status(201).send(transaction);
-    } catch (error) {
-        res.status(400).send(error);
+        res.status(201).json(transaction);
+    } catch (err) {
+        res.status(400).json({ error: err.message });
     }
 });
 
-// Update transaction status
+/* =========================================================
+   UPDATE TRANSACTION (ADMIN APPROVAL)
+========================================================= */
 router.patch('/:id', auth, async (req, res) => {
     try {
-        const transaction = await Transaction.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        const { id } = req.params;
+        const updates = req.body;
+
+        const transaction = await Transaction.findById(id);
         if (!transaction) {
-            return res.status(404).send();
+            return res.status(404).json({ error: 'Transaction not found' });
         }
 
-        // If status is Completed, sync with Payment collection
-        if (req.body.status === 'Completed') {
-            if (transaction.paymentId) {
-                // If linked payment exists, mark it as completed
-                await Payment.findByIdAndUpdate(transaction.paymentId, { status: 'Completed' });
-            } else {
-                // If no linked payment, create a new Payment record
+        const previousStatus = transaction.status;
+        const newStatus = (updates.status || previousStatus).trim();
 
-                // Ensure studentName is present
-                let studentName = transaction.studentName;
-                if (!studentName) {
-                    const Student = require('../models/Student');
-                    const student = await Student.findById(transaction.studentId);
-                    if (student) {
-                        studentName = student.name;
-                        // Determine type if generic
-                        // If transaction type is 'Purchase', we might want to default to 'Meal Plan' or keep as 'Purchase'
-                        // keeping as is since we updated Payment model
-                    }
+        /* =====================================================
+           RUN BUSINESS LOGIC FIRST
+        ===================================================== */
+        if (
+            previousStatus !== 'Completed' &&
+            newStatus === 'Completed' &&
+            !transaction.balanceDeducted
+        ) {
+            const amount = Number(transaction.amount);
+            if (isNaN(amount) || amount <= 0) {
+                return res.status(400).json({ error: 'Invalid amount' });
+            }
+
+            const studentId =
+                transaction.studentId?._id || transaction.studentId;
+
+            /* ---------- FETCH STUDENT ---------- */
+            const student = await Student.findById(studentId);
+            if (!student) {
+                return res.status(404).json({ error: 'Student not found' });
+            }
+
+            /* ---------- FIFO PLAN DEDUCTION ---------- */
+            let remainingAmount = amount;
+
+            const sortedPlans = [...(student.activePlans || [])].sort(
+                (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
+            );
+
+            // CHANGED: We map existing plans to Update status instead of removing them.
+            // This prevents the "Lazy Sync" from re-adding them and re-incrementing balance.
+            const updatedActivePlans = sortedPlans.map(plan => {
+                if (plan.status !== 'paid' && remainingAmount >= plan.price) {
+                    remainingAmount -= plan.price;
+                    console.log(`[PLAN CLEARED] ${plan.name}`);
+                    // Return new object with paid status
+                    return {
+                        ...plan.toObject ? plan.toObject() : plan, // Ensure plain object
+                        status: 'paid',
+                        paidAt: new Date()
+                    };
                 }
+                return plan;
+            });
 
-                if (!studentName) {
-                    throw new Error("Student name not found for transaction");
-                }
+            /* ---------- UPDATE STUDENT (ATOMIC) ---------- */
+            const updatedStudent = await Student.findByIdAndUpdate(
+                studentId,
+                {
+                    $inc: { balance: -amount },
+                    $set: { activePlans: updatedActivePlans }
+                },
+                { new: true }
+            );
 
-                const newPayment = new Payment({
-                    studentId: transaction.studentId,
-                    studentName: studentName,
-                    amount: transaction.amount,
-                    type: transaction.type || 'Purchase', // Default to Purchase if missing
+            if (!updatedStudent) {
+                return res.status(500).json({
+                    error: 'Balance update failed'
+                });
+            }
+
+            console.log(
+                `[BALANCE UPDATED] Student ${updatedStudent._id} → ${updatedStudent.balance}`
+            );
+
+            /* ---------- MARK TRANSACTION ---------- */
+            transaction.balanceDeducted = true;
+
+            /* ---------- SOCKET ---------- */
+            if (req.io) {
+                req.io.emit('balance_update', {
+                    studentId: updatedStudent._id,
+                    balance: updatedStudent.balance
+                });
+            }
+
+            /* ---------- PAYMENT ---------- */
+            if (!transaction.paymentId) {
+                const payment = await Payment.create({
+                    studentId,
+                    studentName: transaction.studentName || updatedStudent.name,
+                    amount,
+                    type: transaction.type || 'Purchase',
                     status: 'Completed',
                     method: transaction.method,
                     transactionId: transaction.transactionId,
                     remarks: transaction.remarks,
                     date: transaction.date
                 });
-                const savedPayment = await newPayment.save();
-
-                // Link the new payment to the transaction
-                transaction.paymentId = savedPayment._id;
-                // Update student name and type in transaction as well if it was missing
-                if (!transaction.studentName) transaction.studentName = studentName;
-                if (!transaction.type) transaction.type = 'Purchase';
-                await transaction.save();
+                transaction.paymentId = payment._id;
+            } else {
+                await Payment.findByIdAndUpdate(
+                    transaction.paymentId,
+                    { status: 'Completed' }
+                );
             }
         }
 
-        res.send(transaction);
-    } catch (error) {
-        console.error("Transaction Approval Error:", error);
-        res.status(400).send(error);
+        /* =====================================================
+           UPDATE TRANSACTION LAST
+        ===================================================== */
+        Object.assign(transaction, updates);
+        transaction.status = newStatus;
+        await transaction.save();
+
+        res.json(transaction);
+    } catch (err) {
+        console.error('Transaction Update Error:', err);
+        res.status(500).json({ error: err.message });
     }
 });
 
