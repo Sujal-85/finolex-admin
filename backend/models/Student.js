@@ -17,6 +17,16 @@ const studentSchema = new mongoose.Schema({
     nextDueDate: { type: Date },
     status: { type: String, enum: ['Active', 'Inactive'], default: 'Active' },
     balance: { type: Number, default: 0 },
+    activePlans: [{
+        planId: { type: mongoose.Schema.Types.ObjectId, ref: 'Plan' },
+        name: { type: String },
+        price: { type: Number },
+        startDate: { type: Date },
+        endDate: { type: Date },
+        status: { type: String, enum: ['paid', 'pending'], default: 'pending' },
+        addedAt: { type: Date, default: Date.now },
+        _id: false
+    }],
     profileImage: { type: String }, // Changed from profilePicture
     password: { type: String } // Added password field as seen in dump
 }, { timestamps: true });

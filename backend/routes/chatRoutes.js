@@ -1,17 +1,13 @@
 const express = require('express');
-const { ChatOpenAI } = require("@langchain/openai");
+const { ChatGoogleGenerativeAI } = require("@langchain/google-genai");
 const { PromptTemplate } = require("@langchain/core/prompts");
 const { StringOutputParser } = require("@langchain/core/output_parsers");
 const router = express.Router();
 
-// Initialize ChatOpenAI with OpenRouter configuration
-const chatModel = new ChatOpenAI({
-    openAIApiKey: process.env.OPENROUTER_API_KEY,
-    configuration: {
-        baseURL: "https://openrouter.ai/api/v1",
-    },
-    // Using a reliable model from OpenRouter
-    modelName: "google/gemini-2.0-flash-exp:free",
+// Initialize ChatGoogleGenerativeAI
+const chatModel = new ChatGoogleGenerativeAI({
+    apiKey: process.env.GEMINI_API_KEY,
+    modelName: "gemini-1.5-flash", // Using a stable, fast model
     temperature: 0.7,
 });
 

@@ -37,8 +37,9 @@ interface Student {
   };
   status: 'Active' | 'Inactive';
   balance: number;
-  profileImage?: string;
   generatedPassword?: string;
+  currentPlan?: string;
+  phone?: string;
 }
 
 export default function Students() {
@@ -74,36 +75,91 @@ export default function Students() {
     }
   };
 
-  const handleExport = () => {
+  const downloadCSV = (content: string, filename: string) => {
+    const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", filename);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleExportAll = () => {
     if (students.length === 0) {
       toast.error("No students to export");
       return;
     }
 
-    const headers = ["Name", "DOB", "Email", "Year", "Hostel", "Status", "Balance"];
+    const headers = ["Name", "DOB", "Email", "Phone", "Year", "Hostel", "Status", "Plan", "Balance"];
     const csvContent = [
       headers.join(","),
       ...students.map(student => [
         `"${student.name}"`,
-        `"${student.name}"`,
         student.dob ? format(new Date(student.dob), "MMM dd, yyyy") : "-",
         student.email,
+        student.phone || "-",
         student.year,
         student.hostelDetails?.hostelName || '',
         student.status,
+        `"${student.currentPlan || '-'}"`,
         student.balance
       ].join(","))
     ].join("\n");
 
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "students_export.csv");
-    link.style.visibility = "hidden";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    downloadCSV(csvContent, "students_all.csv");
+  };
+
+  const handleExportDues = () => {
+    const studentsWithDues = students.filter(s => s.balance > 0);
+
+    if (studentsWithDues.length === 0) {
+      toast.error("No students with outstanding dues found");
+      return;
+    }
+
+    // Group by plan
+    const groupedByPlan: Record<string, Student[]> = {};
+    studentsWithDues.forEach(student => {
+      const plan = student.currentPlan || "No Plan";
+      if (!groupedByPlan[plan]) {
+        groupedByPlan[plan] = [];
+      }
+      groupedByPlan[plan].push(student);
+    });
+
+    // Build CSV content with sections
+    let csvContent = "Plan,Name,Email,Phone,Hostel,Room,Balance\n";
+
+    Object.keys(groupedByPlan).forEach(planName => {
+      // Add a header/separator row for the plan
+      // csvContent += `\n--- ${planName} ---\n`; 
+      // Actually, keeping it tabular is better for Excel, but user asked for "separate".
+      // Let's list them with the Plan column filled, but maybe sorted?
+      // Or we can add a row "Plan: X" then the students.
+      // Let's stick to standard CSV with Plan column, but let's confirm the user's "separate list" request.
+      // "list will be made accordingly separate for each plan" -> This implies visual separation or separate files.
+      // Separate files is bad UX for web (multiple downloads). 
+      // Let's do a single file with groupings.
+
+      const studentsInPlan = groupedByPlan[planName];
+      studentsInPlan.forEach(student => {
+        csvContent += [
+          `"${planName}"`,
+          `"${student.name}"`,
+          student.email,
+          student.phone || "-",
+          student.hostelDetails?.hostelName || '',
+          student.hostelDetails?.roomNo || '',
+          student.balance
+        ].join(",") + "\n";
+      });
+    });
+
+    downloadCSV(csvContent, "students_outstanding_dues.csv");
+    toast.success(`Exported ${studentsWithDues.length} records with dues`);
   };
 
   const handleEdit = (student: Student) => {
@@ -183,10 +239,22 @@ export default function Students() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" className="gap-2" onClick={handleExport}>
-            <Download className="h-4 w-4" />
-            Export
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="gap-2">
+                <Download className="h-4 w-4" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={handleExportAll}>
+                Export All
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportDues}>
+                Export Dues
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button className="gap-2" onClick={handleAddStudent}>
             <UserPlus className="h-4 w-4" />
             Add Student
