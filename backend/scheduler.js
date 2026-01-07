@@ -93,6 +93,98 @@ const initScheduler = (io) => {
     });
 
     // You can add more cleanup tasks or periodic jobs here
+    // 3. Daily Late Fee (Fine) - Runs at Midnight
+    cron.schedule('0 0 * * *', async () => {
+        console.log('[Scheduler] Running Daily Late Fee Check...');
+        try {
+            const students = await Student.find({ balance: { $gt: 0 } });
+            let finedCount = 0;
+            const now = new Date();
+
+            for (const student of students) {
+                // Check if they have an active plan older than 7 days
+                const activePlan = student.activePlans?.find(p => p.status === 'active' || p.status === 'pending');
+
+                if (activePlan && activePlan.startDate) {
+                    const startDate = new Date(activePlan.startDate);
+                    const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+
+                    if (daysSinceStart > 7) {
+                        // Apply ₹5 fine
+                        student.balance = (student.balance || 0) + 5;
+                        await student.save();
+                        finedCount++;
+
+                        await Notification.create({
+                            title: 'Late Fee Applied',
+                            message: 'A late fee of ₹5 has been added to your outstanding balance.',
+                            type: 'payment',
+                            recipient: student._id
+                        });
+                    }
+                }
+            }
+            if (finedCount > 0) {
+                console.log(`[Scheduler] Applied fines to ${finedCount} students.`);
+            }
+        } catch (error) {
+            console.error('[Scheduler] Late Fee Error:', error);
+        }
+    });
+
+    // 4. Random Daily Reminders (3 times between 8 AM - 11 PM)
+    cron.schedule('0 8 * * *', () => { // Schedules for the day at 8 AM
+        console.log('[Scheduler] Scheduling random reminders for the day...');
+
+        // Window: 15 hours (8 AM to 11 PM) in milliseconds
+        const windowMs = 15 * 60 * 60 * 1000;
+
+        // Generate 3 random delays
+        const delays = [
+            Math.floor(Math.random() * windowMs),
+            Math.floor(Math.random() * windowMs),
+            Math.floor(Math.random() * windowMs)
+        ].sort((a, b) => a - b); // Sort to run in order
+
+        const sendReminders = async (batchNum) => {
+            console.log(`[Scheduler] Sending Batch ${batchNum} Reminders...`);
+            try {
+                const studentsWithDues = await Student.find({ balance: { $gt: 0 } });
+                const now = new Date();
+                let reminderCount = 0;
+
+                for (const student of studentsWithDues) {
+                    // Check if they have an active plan older than 7 days (same logic as fines)
+                    const activePlan = student.activePlans?.find(p => p.status === 'active' || p.status === 'pending');
+
+                    if (activePlan && activePlan.startDate) {
+                        const startDate = new Date(activePlan.startDate);
+                        const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
+
+                        if (daysSinceStart > 7) {
+                            await Notification.create({
+                                title: 'Overdue Payment Reminder',
+                                message: `Urgent: You have an outstanding balance of ₹${student.balance} causing daily fines. Please pay immediately.`,
+                                type: 'payment',
+                                recipient: student._id
+                            });
+                            reminderCount++;
+                        }
+                    }
+                }
+                console.log(`[Scheduler] Batch ${batchNum}: Sent overdue reminders to ${reminderCount} students.`);
+            } catch (err) {
+                console.error('[Scheduler] Reminder Batch Error:', err);
+            }
+        };
+
+        // Schedule the timeouts
+        delays.forEach((delay, index) => {
+            setTimeout(() => sendReminders(index + 1), delay);
+            console.log(`[Scheduler] Reminder ${index + 1} scheduled in ${Math.round(delay / 60000)} minutes.`);
+        });
+    });
+
 };
 
 module.exports = initScheduler;

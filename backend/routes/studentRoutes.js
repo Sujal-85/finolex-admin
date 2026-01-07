@@ -114,6 +114,25 @@ router.patch('/:id', auth, async (req, res) => {
             type: 'student'
         });
 
+        // Notify the student about the profile update
+        await Notification.create({
+            title: 'Profile Updated',
+            message: 'Your profile details have been successfully updated.',
+            type: 'student',
+            recipient: student._id
+        });
+
+        // Log specific balance update if present
+        if (req.body.balance !== undefined) {
+            await logActivity({
+                user: req.user.name || 'Admin',
+                action: 'Manual Balance Update',
+                module: 'students',
+                details: `Updated balance for student ${student.name} to ${student.balance}`,
+                ipAddress: req.ip
+            });
+        }
+
         await logActivity({
             user: req.user.name || 'Admin',
             action: 'Updated Student Record',
@@ -134,6 +153,35 @@ router.delete('/:id', auth, async (req, res) => {
         const student = await Student.findByIdAndDelete(req.params.id);
         if (!student) return res.status(404).send();
         res.send(student);
+    } catch (error) {
+        res.status(500).send(error);
+    }
+});
+
+// Send Payment Reminder
+router.post('/:id/reminder', auth, async (req, res) => {
+    try {
+        const student = await Student.findById(req.params.id);
+        if (!student) return res.status(404).send();
+
+        const message = req.body.message || `Dear ${student.name}, this is a reminder to clear your outstanding dues of Rs. ${student.balance}.`;
+
+        await Notification.create({
+            title: 'Payment Reminder',
+            message: message,
+            type: 'payment',
+            recipient: student._id
+        });
+
+        await logActivity({
+            user: req.user.name || 'Admin',
+            action: 'Sent Payment Reminder',
+            module: 'students',
+            details: `Sent payment reminder to ${student.name}`,
+            ipAddress: req.ip
+        });
+
+        res.send({ message: 'Reminder sent successfully' });
     } catch (error) {
         res.status(500).send(error);
     }

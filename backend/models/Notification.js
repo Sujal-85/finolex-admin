@@ -8,6 +8,7 @@ const notificationSchema = new mongoose.Schema({
         enum: ['payment', 'student', 'announcement', 'menu', 'complaint', 'feedback'],
         required: true
     },
+    recipient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // targeted notification
     isRead: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now }
 });
