@@ -62,6 +62,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
     const [hostelName, setHostelName] = useState("");
     const [plan, setPlan] = useState("Basic Mess Plan");
     const [profileImage, setProfileImage] = useState("");
+    const [balance, setBalance] = useState("0");
 
     useEffect(() => {
         if (studentToEdit) {
@@ -78,6 +79,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
             // @ts-ignore
             setPlan(studentToEdit.currentPlan || "Basic Mess Plan");
             setProfileImage(studentToEdit.profileImage || "");
+            setBalance(studentToEdit.balance?.toString() || "0");
         } else {
             // Reset form when not editing
             if (!open) {
@@ -89,6 +91,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                 setHostelName("");
                 setPlan("Basic Mess Plan");
                 setProfileImage("");
+                setBalance("0");
             }
         }
     }, [studentToEdit, open]);
@@ -109,7 +112,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
             },
             currentPlan: plan,
             status: 'Active',
-            balance: 0,
+            balance: parseFloat(balance) || 0,
             profileImage
         };
 
@@ -252,6 +255,20 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                                     <SelectItem value="Premium Mess Plan">Premium Mess Plan</SelectItem>
                                 </SelectContent>
                             </Select>
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="balance" className="text-right">
+                                Balance (₹)
+                            </Label>
+                            <Input
+                                id="balance"
+                                name="balance"
+                                type="number"
+                                value={balance}
+                                onChange={(e) => setBalance(e.target.value)}
+                                placeholder="0"
+                                className="col-span-3"
+                            />
                         </div>
                         <div className="grid grid-cols-4 items-center gap-4">
                             <Label htmlFor="profilePicture" className="text-right">

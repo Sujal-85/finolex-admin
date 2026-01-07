@@ -25,6 +25,20 @@ import api from "@/api/client";
 import { toast } from "sonner";
 import { AddStudentDialog } from "@/components/dashboard/AddStudentDialog";
 import { Loader } from "@/components/ui/loader";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 interface Student {
   _id: string;
   name: string;
@@ -51,7 +65,12 @@ export default function Students() {
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const [newlyCreatedPasswords, setNewlyCreatedPasswords] = useState<Record<string, string>>({});
+
+  // Filter State
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [yearFilter, setYearFilter] = useState("all");
 
   useEffect(() => {
     fetchStudents();
@@ -190,9 +209,13 @@ export default function Students() {
     }
   };
 
-  const handleReminder = (student: Student) => {
-    // Simulation for now
-    toast.success(`Reminder sent to ${student.email}`);
+  const handleReminder = async (student: Student) => {
+    try {
+      await api.post(`/students/${student._id}/reminder`);
+      toast.success(`Payment reminder sent to ${student.name}`);
+    } catch (error) {
+      toast.error("Failed to send reminder");
+    }
   };
 
   const handleAddStudent = () => {
@@ -217,11 +240,16 @@ export default function Students() {
     }
   };
 
-  const filteredStudents = students.filter(
-    (student) =>
+  const filteredStudents = students.filter((student) => {
+    const matchesSearch =
       student.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      student.email.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      student.email.toLowerCase().includes(searchQuery.toLowerCase());
+
+    const matchesStatus = statusFilter === "all" || student.status === statusFilter;
+    const matchesYear = yearFilter === "all" || student.year === yearFilter;
+
+    return matchesSearch && matchesStatus && matchesYear;
+  });
 
 
 
@@ -280,10 +308,71 @@ export default function Students() {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              Filters
-            </Button>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Filter className="h-4 w-4" />
+                  Filters
+                  {(statusFilter !== "all" || yearFilter !== "all") && (
+                    <Badge variant="secondary" className="ml-1 px-1 h-5 min-w-5 flex items-center justify-center rounded-full text-xs">
+                      {(statusFilter !== "all" ? 1 : 0) + (yearFilter !== "all" ? 1 : 0)}
+                    </Badge>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80" align="end">
+                <div className="grid gap-4">
+                  <div className="space-y-2">
+                    <h4 className="font-medium leading-none">Filter Students</h4>
+                    <p className="text-sm text-muted-foreground">
+                      Refine the student list by status or year
+                    </p>
+                  </div>
+                  <div className="grid gap-4">
+                    {/* Status Filter */}
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <Label htmlFor="status">Status</Label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="col-span-2 h-8">
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Statuses</SelectItem>
+                          <SelectItem value="Active">Active</SelectItem>
+                          <SelectItem value="Inactive">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    {/* Year Filter */}
+                    <div className="grid grid-cols-3 items-center gap-4">
+                      <Label htmlFor="year">Year</Label>
+                      <Select value={yearFilter} onValueChange={setYearFilter}>
+                        <SelectTrigger className="col-span-2 h-8">
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Years</SelectItem>
+                          <SelectItem value="First">First Year</SelectItem>
+                          <SelectItem value="Second">Second Year</SelectItem>
+                          <SelectItem value="Third">Third Year</SelectItem>
+                          <SelectItem value="Fourth">Fourth Year</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    className="w-full justify-center text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setStatusFilter("all");
+                      setYearFilter("all");
+                    }}
+                  >
+                    Reset Filters
+                  </Button>
+                </div>
+              </PopoverContent>
+            </Popover>
           </div>
 
           <div className="rounded-md border overflow-auto custom-scrollbar max-h-[calc(100vh-250px)]">

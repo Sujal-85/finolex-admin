@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Mail, Phone, Edit, Download } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Edit, Download, Bell } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
@@ -274,6 +274,16 @@ export default function StudentDetail() {
     }
   };
 
+  const handleReminder = async () => {
+    if (!student) return;
+    try {
+      await api.post(`/students/${student._id}/reminder`);
+      toast.success(`Payment reminder sent to ${student.name}`);
+    } catch (error) {
+      toast.error("Failed to send reminder");
+    }
+  };
+
   if (isLoading) {
     return <Loader />;
   }
@@ -305,6 +315,10 @@ export default function StudentDetail() {
           <Button variant="outline" className="gap-2 flex-1 md:flex-none" onClick={handleDownloadPDF}>
             <Download className="h-4 w-4" />
             Download Profile
+          </Button>
+          <Button variant="outline" className="gap-2 flex-1 md:flex-none" onClick={handleReminder}>
+            <Bell className="h-4 w-4" />
+            Send Reminder
           </Button>
           <Button className="gap-2 flex-1 md:flex-none" onClick={() => setIsEditOpen(true)}>
             <Edit className="h-4 w-4" />

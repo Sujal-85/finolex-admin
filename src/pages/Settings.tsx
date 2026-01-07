@@ -38,6 +38,12 @@ export default function Settings() {
     complaintAlerts: true,
   });
 
+  // Admin Profile State
+  const [adminProfile, setAdminProfile] = useState({
+    name: "",
+    email: ""
+  });
+
   // Logo Preview State
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
@@ -46,7 +52,7 @@ export default function Settings() {
   const [newService, setNewService] = useState("");
 
   useEffect(() => {
-    fetchSettings();
+    // fetchSettings moved to separate useEffect or kept here, but avoid double mounting issues if possible
   }, []);
 
   const fetchSettings = async () => {
@@ -78,6 +84,25 @@ export default function Settings() {
       setIsLoading(false);
     }
   };
+
+  const fetchAdminProfile = async () => {
+    try {
+      const response = await api.get('/auth/me');
+      if (response.data) {
+        setAdminProfile({
+          name: response.data.name || "",
+          email: response.data.email || ""
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch admin profile", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchSettings();
+    fetchAdminProfile();
+  }, []);
 
   const handleSaveAll = async () => {
     try {
@@ -339,11 +364,11 @@ export default function Settings() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="adminEmail">Email</Label>
-                    <Input id="adminEmail" type="email" defaultValue="admin@xyzcollege.edu" className="bg-slate-50" />
+                    <Input id="adminEmail" type="email" value={adminProfile.email} disabled className="bg-slate-50" />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="adminName">Admin Name</Label>
-                    <Input id="adminName" defaultValue="Admin User" className="bg-slate-50" />
+                    <Input id="adminName" value={adminProfile.name} disabled className="bg-slate-50" />
                   </div>
                 </div>
                 <div className="pt-4 border-t border-slate-100 mt-4">
