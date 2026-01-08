@@ -1,5 +1,5 @@
 import { useParams } from "react-router-dom";
-import { ArrowLeft, Mail, Phone, Edit, Download, Bell } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Edit, Download, Bell, Share2, MoreHorizontal } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import api from "@/api/client";
@@ -40,6 +46,13 @@ interface Student {
   createdAt: string;
   profileImage?: string;
   dob?: string;
+  activePlans?: {
+    name: string;
+    price: number;
+    startDate?: string;
+    endDate?: string;
+    status: 'pending' | 'paid';
+  }[];
 }
 
 export default function StudentDetail() {
@@ -418,18 +431,37 @@ export default function StudentDetail() {
                   <CardTitle>Current Plan</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-lg font-semibold">
-                        {student.currentPlan || "No Plan Active"}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Monthly subscription
-                      </p>
-                    </div>
-                    <p className="text-2xl font-bold">
-                      ₹{planPrice.toLocaleString()}
-                    </p>
+                  <div className="space-y-4">
+                    {(student.activePlans && student.activePlans.length > 0) ? (
+                      student.activePlans.map((plan, index) => (
+                        <div key={index} className="flex items-center justify-between border-b last:border-0 pb-2 last:pb-0">
+                          <div>
+                            <p className="font-semibold">{plan.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {plan.startDate ? new Date(plan.startDate).toLocaleDateString() : 'Start TBD'} - {plan.endDate ? new Date(plan.endDate).toLocaleDateString() : 'End TBD'}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold">₹{plan.price}</p>
+                            <StatusBadge status={plan.status === 'paid' ? 'active' : 'pending'} />
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-lg font-semibold">
+                            {student.currentPlan || "No Plan Active"}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Monthly subscription
+                          </p>
+                        </div>
+                        <p className="text-xl font-bold">
+                          ₹{planPrice.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
@@ -461,11 +493,14 @@ export default function StudentDetail() {
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Next Due Date</span>
                     <span className="font-medium">
-                      {student.balance <= 0
-                        ? (student as any).nextDueDate
-                          ? new Date((student as any).nextDueDate).toLocaleDateString()
-                          : "No Due Date"
-                        : "Overdue"}
+                      {(() => {
+                        const dueDate = (student as any).nextDueDate ? new Date((student as any).nextDueDate) : null;
+                        const isOverdue = dueDate && new Date() > dueDate && student.balance > 0;
+
+                        if (!dueDate) return "No Due Date";
+                        if (isOverdue) return <span className="text-destructive font-bold">Overdue ({dueDate.toLocaleDateString()})</span>;
+                        return dueDate.toLocaleDateString();
+                      })()}
                     </span>
                   </div>
                 </CardContent>
@@ -482,6 +517,7 @@ export default function StudentDetail() {
                         <TableHead>Amount</TableHead>
                         <TableHead>Type</TableHead>
                         <TableHead>Status</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -494,6 +530,46 @@ export default function StudentDetail() {
                           <TableCell>{payment.type}</TableCell>
                           <TableCell>
                             <StatusBadge status={payment.status.toLowerCase()} />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {payment.status === 'Completed' && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 px-2 text-primary"
+                                onClick={async () => {
+                                  try {
+                                    toast.info("Downloading receipt...");
+                                    const response = await api.post('/receipts/generate', {
+                                      transaction: {
+                                        ...payment,
+                                        transactionId: payment.transactionId || payment._id
+                                      },
+                                      studentId: student?._id
+                                    }, {
+                                      responseType: 'blob'
+                                    });
+
+                                    // Create Blob URL
+                                    const url = window.URL.createObjectURL(new Blob([response.data]));
+                                    const link = document.createElement('a');
+                                    link.href = url;
+                                    link.setAttribute('download', `Receipt_${payment._id.slice(-6)}.pdf`);
+                                    document.body.appendChild(link);
+                                    link.click();
+                                    link.remove();
+                                    window.URL.revokeObjectURL(url);
+
+                                    toast.success("Download complete");
+                                  } catch (e) {
+                                    console.error(e);
+                                    toast.error("Failed to download receipt");
+                                  }
+                                }}
+                              >
+                                <Download className="h-4 w-4 mr-1" /> Receipt
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}

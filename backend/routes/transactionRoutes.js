@@ -122,7 +122,7 @@ router.patch('/:id', auth, async (req, res) => {
                     $inc: { balance: -amount },
                     $set: { activePlans: updatedActivePlans }
                 },
-                { new: true }
+                { new: true, runValidators: false } // Explicitly disable validation
             );
 
             if (!updatedStudent) {

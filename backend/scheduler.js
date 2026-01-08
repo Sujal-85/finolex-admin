@@ -43,6 +43,9 @@ const initScheduler = (io) => {
         } catch (error) {
             console.error('Scheduler Error:', error);
         }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
     });
 
     // 2. Global Plan Assignment (Admin Side Tracking)
@@ -90,10 +93,13 @@ const initScheduler = (io) => {
         } catch (error) {
             console.error('[Admin Scheduler] Plan Assignment Error:', error);
         }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
     });
 
     // You can add more cleanup tasks or periodic jobs here
-    // 3. Daily Late Fee (Fine) - Runs at Midnight
+    // 3. Daily Late Fee (Fine) - Runs at Midnight IST
     cron.schedule('0 0 * * *', async () => {
         console.log('[Scheduler] Running Daily Late Fee Check...');
         try {
@@ -130,9 +136,12 @@ const initScheduler = (io) => {
         } catch (error) {
             console.error('[Scheduler] Late Fee Error:', error);
         }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
     });
 
-    // 4. Random Daily Reminders (3 times between 8 AM - 11 PM)
+    // 4. Random Daily Reminders (3 times between 8 AM - 11 PM IST)
     cron.schedule('0 8 * * *', () => { // Schedules for the day at 8 AM
         console.log('[Scheduler] Scheduling random reminders for the day...');
 
@@ -183,6 +192,82 @@ const initScheduler = (io) => {
             setTimeout(() => sendReminders(index + 1), delay);
             console.log(`[Scheduler] Reminder ${index + 1} scheduled in ${Math.round(delay / 60000)} minutes.`);
         });
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
+
+    // 5. Keep-Alive Self Ping (Every 14 minutes, Active Hours Only)
+    // Runs 00:00-00:59 and 07:00-23:59 IST.
+    cron.schedule('*/14 0,7-23 * * *', async () => {
+        const axios = require('axios');
+        const SERVER_URL = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`;
+
+        console.log(`[Keep-Alive] Pinging server at ${SERVER_URL}/ping...`);
+        try {
+            await axios.get(`${SERVER_URL}/ping`);
+            console.log('[Keep-Alive] Ping successful.');
+        } catch (error) {
+            console.error('[Keep-Alive] Ping failed:', error.message);
+        }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
+
+    // 6. Meal Reminders (IST)
+    // Breakfast - 8:00 AM
+    cron.schedule('0 8 * * *', async () => {
+        try {
+            const notification = await Notification.create({
+                title: 'Breakfast is Ready! 🍳',
+                message: 'Good Morning! Breakfast is being served in the canteen.',
+                type: 'menu'
+            });
+            if (io) io.emit('newNotification', notification);
+            console.log('[Scheduler] Breakfast reminder sent.');
+        } catch (err) {
+            console.error('[Scheduler] Breakfast Reminder Error:', err);
+        }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
+
+    // Lunch - 12:30 PM
+    cron.schedule('30 12 * * *', async () => {
+        try {
+            const notification = await Notification.create({
+                title: 'Lunch Time! 🍛',
+                message: 'Lunch is now being served. Don\'t miss your meal!',
+                type: 'menu'
+            });
+            if (io) io.emit('newNotification', notification);
+            console.log('[Scheduler] Lunch reminder sent.');
+        } catch (err) {
+            console.error('[Scheduler] Lunch Reminder Error:', err);
+        }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
+
+    // Dinner - 7:30 PM
+    cron.schedule('30 19 * * *', async () => {
+        try {
+            const notification = await Notification.create({
+                title: 'Dinner Served! 🍽️',
+                message: 'Dinner is ready in the canteen. Please come and have your meal.',
+                type: 'menu'
+            });
+            if (io) io.emit('newNotification', notification);
+            console.log('[Scheduler] Dinner reminder sent.');
+        } catch (err) {
+            console.error('[Scheduler] Dinner Reminder Error:', err);
+        }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
     });
 
 };

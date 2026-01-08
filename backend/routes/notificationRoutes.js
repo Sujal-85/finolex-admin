@@ -7,7 +7,14 @@ const router = express.Router();
 router.get('/', auth, async (req, res) => {
     try {
         console.log('Fetching notifications...');
-        const notifications = await Notification.find().sort({ createdAt: -1 }).limit(50);
+        console.log('Fetching notifications...');
+        // Filter: Global notifications (recipient: null) OR Targeted to current user
+        const notifications = await Notification.find({
+            $or: [
+                { recipient: null },
+                { recipient: req.user._id }
+            ]
+        }).sort({ createdAt: -1 }).limit(50);
         console.log(`Found ${notifications.length} notifications`);
         res.send(notifications);
     } catch (error) {

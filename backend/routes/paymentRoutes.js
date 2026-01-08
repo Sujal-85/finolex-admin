@@ -58,18 +58,18 @@ router.post('/', auth, async (req, res) => {
             remarks: payment.remarks
         });
 
-        // Update Student's nextDueDate if it's a Meal Plan payment
+        // Update Student Balance and Next Due Date if applicable
+        const updateData = { $inc: { balance: -payment.amount } };
+
         if (payment.type === 'Meal Plan') {
-            const Student = require('../models/Student');
-            const student = await Student.findById(payment.studentId);
-            if (student) {
-                const currentDueDate = student.nextDueDate ? new Date(student.nextDueDate) : new Date();
-                // Add 30 days
-                currentDueDate.setDate(currentDueDate.getDate() + 30);
-                student.nextDueDate = currentDueDate;
-                await student.save();
-            }
+            const currentDueDate = await mongoose.model('Student').findById(payment.studentId).select('nextDueDate');
+            let newDate = currentDueDate?.nextDueDate ? new Date(currentDueDate.nextDueDate) : new Date();
+            newDate.setDate(newDate.getDate() + 30);
+            updateData.nextDueDate = newDate;
         }
+
+        await mongoose.model('Student').findByIdAndUpdate(payment.studentId, updateData);
+
 
         // Emit real-time event
         req.io.emit('payment_updated', payment);
