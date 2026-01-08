@@ -76,7 +76,13 @@ console.log('Loading Settlement Routes...');
 app.use('/api/settlements', require('./routes/settlementRoutes'));
 app.use('/api/activity-logs', require('./routes/activityLogRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
+app.use('/api/receipts', require('./routes/receiptRoutes'));
 
+
+// Keep-Alive Endpoint
+app.get('/ping', (req, res) => {
+    res.status(200).send('pong');
+});
 
 // Base route
 app.get('/', (req, res) => {
