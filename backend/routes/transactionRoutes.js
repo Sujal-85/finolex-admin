@@ -4,6 +4,7 @@ const router = express.Router();
 const Transaction = require('../models/Transaction');
 const Payment = require('../models/Payment');
 const Student = require('../models/Student');
+const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 
 /* =========================================================
@@ -174,6 +175,23 @@ router.patch('/:id', auth, async (req, res) => {
         Object.assign(transaction, updates);
         transaction.status = newStatus;
         await transaction.save();
+
+        /* ---------- NOTIFICATIONS ---------- */
+        if (newStatus === 'Completed' && previousStatus !== 'Completed') {
+            await Notification.create({
+                title: 'Payment Verified',
+                message: `Your payment of ₹${transaction.amount} has been successfully verified.`,
+                type: 'payment',
+                recipient: transaction.studentId?._id || transaction.studentId
+            });
+        } else if (newStatus === 'Failed' && previousStatus !== 'Failed') {
+            await Notification.create({
+                title: 'Payment Rejected',
+                message: `Your payment of ₹${transaction.amount} was rejected. Please contact admin for details.`,
+                type: 'payment',
+                recipient: transaction.studentId?._id || transaction.studentId
+            });
+        }
 
         res.json(transaction);
     } catch (err) {
