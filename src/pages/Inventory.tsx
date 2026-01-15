@@ -162,14 +162,14 @@ export default function Inventory() {
 
             <Card>
                 <CardHeader>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                         <CardTitle>Stock Overview</CardTitle>
-                        <div className="flex items-center gap-2">
-                            <div className="relative w-64">
+                        <div className="flex items-center gap-2 w-full md:w-auto">
+                            <div className="relative flex-1 md:w-64">
                                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     placeholder="Search inventory..."
-                                    className="pl-8"
+                                    className="pl-8 w-full"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
                                 />
@@ -181,61 +181,63 @@ export default function Inventory() {
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Item Name</TableHead>
-                                <TableHead>Category</TableHead>
-                                <TableHead>Stock Level</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Supplier</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredItems.length === 0 ? (
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                                        {isLoading ? "Loading inventory..." : "No items found"}
-                                    </TableCell>
+                                    <TableHead className="w-[150px]">Item Name</TableHead>
+                                    <TableHead>Category</TableHead>
+                                    <TableHead>Stock Level</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>Supplier</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
-                            ) : (
-                                filteredItems.map((item) => (
-                                    <TableRow key={item._id}>
-                                        <TableCell className="font-medium">{item.name}</TableCell>
-                                        <TableCell>{item.category}</TableCell>
-                                        <TableCell>
-                                            <div className="flex items-center gap-2">
-                                                <span>{item.quantity} {item.unit}</span>
-                                                {item.quantity <= item.minThreshold && (
-                                                    <AlertTriangle className="h-4 w-4 text-warning" />
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant={
-                                                item.status === 'In Stock' ? 'default' :
-                                                    item.status === 'Low Stock' ? 'secondary' : 'destructive'
-                                            }>
-                                                {item.status}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{item.supplier || "N/A"}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="icon" onClick={() => handleEditItem(item)}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item._id)}>
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            </div>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredItems.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                                            {isLoading ? "Loading inventory..." : "No items found"}
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : (
+                                    filteredItems.map((item) => (
+                                        <TableRow key={item._id}>
+                                            <TableCell className="font-medium">{item.name}</TableCell>
+                                            <TableCell>{item.category}</TableCell>
+                                            <TableCell>
+                                                <div className="flex items-center gap-2">
+                                                    <span>{item.quantity} {item.unit}</span>
+                                                    {item.quantity <= item.minThreshold && (
+                                                        <AlertTriangle className="h-4 w-4 text-warning" />
+                                                    )}
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Badge variant={
+                                                    item.status === 'In Stock' ? 'default' :
+                                                        item.status === 'Low Stock' ? 'secondary' : 'destructive'
+                                                }>
+                                                    {item.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{item.supplier || "N/A"}</TableCell>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    <Button variant="ghost" size="icon" onClick={() => handleEditItem(item)}>
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteItem(item._id)}>
+                                                        <Trash2 className="h-4 w-4 text-destructive" />
+                                                    </Button>
+                                                </div>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))
+                                )}
+                            </TableBody>
+                        </Table>
+                    </div>
                 </CardContent>
             </Card>
 

@@ -196,11 +196,11 @@ export default function Settings() {
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="bg-white p-1 border border-slate-200 rounded-xl shadow-sm inline-flex h-auto gap-1">
-            <TabsTrigger value="general" className="px-6 py-2 rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">General</TabsTrigger>
-            <TabsTrigger value="orders" className="px-6 py-2 rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">Order Config</TabsTrigger>
-            <TabsTrigger value="users" className="px-6 py-2 rounded-lg data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">Admin Account</TabsTrigger>
-            <TabsTrigger value="notifications" className="px-6 py-2 rounded-lg data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700">Notifications</TabsTrigger>
+          <TabsList className="bg-white p-1 border border-slate-200 rounded-xl shadow-sm flex flex-wrap h-auto gap-1 w-full justify-start">
+            <TabsTrigger value="general" className="px-4 py-2 flex-grow sm:flex-grow-0 text-sm rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">General</TabsTrigger>
+            <TabsTrigger value="orders" className="px-4 py-2 flex-grow sm:flex-grow-0 text-sm rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">Order Config</TabsTrigger>
+            <TabsTrigger value="users" className="px-4 py-2 flex-grow sm:flex-grow-0 text-sm rounded-lg data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">Admin Account</TabsTrigger>
+            <TabsTrigger value="notifications" className="px-4 py-2 flex-grow sm:flex-grow-0 text-sm rounded-lg data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700">Notifications</TabsTrigger>
           </TabsList>
 
           {/* General Settings */}
@@ -361,7 +361,7 @@ export default function Settings() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 pt-6">
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="adminEmail">Email</Label>
                     <Input id="adminEmail" type="email" value={adminProfile.email} disabled className="bg-slate-50" />
