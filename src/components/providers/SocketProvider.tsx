@@ -21,8 +21,28 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     const queryClient = useQueryClient();
 
     useEffect(() => {
+        // Request notification permission on mount if default, using a toast for user interaction
+        if ("Notification" in window && Notification.permission === "default") {
+            toast.message("Enable Notifications", {
+                description: "Get real-time updates for payments and orders.",
+                action: {
+                    label: "Enable",
+                    onClick: () => {
+                        Notification.requestPermission().then((permission) => {
+                            if (permission === "granted") {
+                                new Notification("Notifications Enabled", {
+                                    body: "You will now receive system notifications.",
+                                    icon: "/logo.png"
+                                });
+                            }
+                        });
+                    },
+                },
+                duration: 10000,
+            });
+        }
+
         // Connect to the backend URL
-        // Assuming backend is on localhost:5000 or same host as api
         const socketInstance = io("http://localhost:5000");
 
         socketInstance.on("connect", () => {
@@ -35,18 +55,47 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
             setIsConnected(false);
         });
 
-        // Global listener for updates
-        // You can listen to specific events or a generic 'data_update'
+        // Helper to show system notification
+        const showSystemNotification = (title: string, body: string) => {
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification(title, {
+                    body,
+                    icon: "/logo.png",
+                    // vibrate: [200, 100, 200], // Optional: vibrate on mobile
+                });
+            }
+        };
+
+        // Payment Updates
         socketInstance.on("payment_updated", (data) => {
             console.log("Payment updated:", data);
             queryClient.invalidateQueries({ queryKey: ["payments"] });
-            toast.info("New payment received", {
-                description: `₹${data.amount} from ${data.studentName}`
-            });
+
+            const title = "New Payment Received";
+            const message = `₹${data.amount} from ${data.studentName}`;
+
+            toast.info(title, { description: message });
+            showSystemNotification(title, message);
         });
 
-        // Add more listeners as needed for other entities
-        // socketInstance.on("menu_updated", () => queryClient.invalidateQueries({ queryKey: ["menu"] }));
+        // Other Notifications (Announcements, etc.)
+        socketInstance.on("newNotification", (data: any) => {
+            console.log("New notification received:", data);
+
+            // Filter out meal reminders
+            const isMealReminder =
+                data.title?.toLowerCase().includes("breakfast") ||
+                data.title?.toLowerCase().includes("lunch") ||
+                data.title?.toLowerCase().includes("dinner") ||
+                data.type === 'menu'; // Assuming type 'menu' is primarily for these cyclical reminders in scheduler.js
+
+            if (isMealReminder) {
+                return;
+            }
+
+            toast.info(data.title, { description: data.message });
+            showSystemNotification(data.title, data.message);
+        });
 
         setSocket(socketInstance);
 
