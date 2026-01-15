@@ -45,6 +45,8 @@ export function TopNavbar() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     toast.success("Logged out successfully");
     navigate("/login");
   };
@@ -253,11 +255,9 @@ export function TopNavbar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-              <DropdownMenuItem onClick={async () => {
+              <DropdownMenuItem onClick={() => {
                 setIsRefreshing(true);
-                await queryClient.invalidateQueries();
-                setTimeout(() => setIsRefreshing(false), 1000);
-                toast.success("Data refreshed");
+                window.location.reload();
               }}>
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh Data
@@ -310,11 +310,9 @@ export function TopNavbar() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={async () => {
+            onClick={() => {
               setIsRefreshing(true);
-              await queryClient.invalidateQueries();
-              setTimeout(() => setIsRefreshing(false), 1000);
-              toast.success("Data refreshed");
+              window.location.reload();
             }}
             className={isRefreshing ? "animate-spin" : ""}
             disabled={isRefreshing}

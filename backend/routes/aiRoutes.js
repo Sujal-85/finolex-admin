@@ -1,119 +1,126 @@
 const express = require('express');
 const router = express.Router();
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+// --- LOCAL PARSERS ---
+
+// Helper to parse date
+function parseDate(text) {
+    const today = new Date();
+    const lower = text.toLowerCase();
+    if (lower.includes('tomorrow')) {
+        const d = new Date(today);
+        d.setDate(d.getDate() + 1);
+        return d.toISOString().split('T')[0];
+    }
+    // Simple YYYY-MM-DD match
+    const dateMatch = text.match(/\d{4}-\d{2}-\d{2}/);
+    if (dateMatch) return dateMatch[0];
+
+    return today.toISOString().split('T')[0]; // Default to today
+}
+
+// Helper to parse time
+function parseTime(text) {
+    const timeMatch = text.match(/([01]?[0-9]|2[0-3]):[0-5][0-9]/);
+    if (timeMatch) return timeMatch[0];
+    return "13:00"; // Default lunch time
+}
+
+// Helper to parse order
+function parseOrderLocally(prompt) {
+    const lower = prompt.toLowerCase();
+
+    // Detect event type
+    let eventType = 'Guest';
+    if (lower.includes('exam')) eventType = 'Exam';
+    else if (lower.includes('function') || lower.includes('party')) eventType = 'Function';
+
+    // Detect Dept
+    let department = 'General';
+    if (lower.includes('it') || lower.includes('computer')) department = 'Information Technology';
+    else if (lower.includes('mech')) department = 'Mechanical';
+    else if (lower.includes('civil')) department = 'Civil';
+    else if (lower.includes('entc')) department = 'E&TC';
+
+    // Detect Service
+    let serviceType = 'Lunch';
+    if (lower.includes('snack') || lower.includes('breakfast') || lower.includes('tea')) serviceType = 'Snacks';
+    if (lower.includes('dinner')) serviceType = 'Dinner';
+
+    // Detect Persons
+    let numberOfPersons = 1;
+    const numMatch = lower.match(/(\d+)\s*(people|persons|pax|guests)/);
+    if (numMatch) {
+        numberOfPersons = parseInt(numMatch[1]);
+    }
+
+    return {
+        eventName: 'Canteen Order',
+        eventType,
+        department,
+        date: parseDate(prompt),
+        time: parseTime(prompt),
+        venue: 'Canteen',
+        serviceType,
+        numberOfPersons,
+        notes: prompt
+    };
+}
+
 
 router.post('/parse-order', async (req, res) => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            console.error("GEMINI_API_KEY is missing in backend environment.");
-            return res.status(500).json({ message: "Server Error: GEMINI_API_KEY is not configured." });
-        }
-
         const { prompt } = req.body;
-        console.log("Received AI Prompt:", prompt);
+        console.log("Received Local Parse Request:", prompt);
 
         if (!prompt) {
             return res.status(400).json({ message: "Prompt is required" });
         }
 
-        // Initialize with Official SDK
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        // Using user-specified model which was validated to work
-        const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+        const parsedOrder = parseOrderLocally(prompt);
+        console.log("Parsed JSON Locally:", parsedOrder);
 
-        const systemPrompt = `
-        You are an intelligent assistant for a Canteen Management System.
-        Your task is to extract order details from natural language text and return them as a JSON object.
-
-        Target Schema (JSON only):
-        {
-            "eventName": "string (default: 'Canteen Order')",
-            "eventType": "string (options: 'Guest', 'Function', 'Exam'. Default: 'Guest')",
-            "department": "string (infer from text, e.g. 'IT', 'Comp', 'Mech')",
-            "date": "string (YYYY-MM-DD format. If 'today', use today's date. If 'tomorrow', use tomorrow's date. If day name 'Friday', find next coming Friday)",
-            "time": "string (HH:mm format, 24hr)",
-            "venue": "string (default: 'Canteen')",
-            "serviceType": "string (options: 'Lunch', 'Snacks', 'Both'. Default: 'Lunch')",
-            "numberOfPersons": "number (default: 1)",
-            "notes": "string (any extra details)"
-        }
-
-        Current Date: ${new Date().toISOString().split('T')[0]}
-
-        Rules:
-        1. Return ONLY the JSON object. No markdown formatting.
-        2. Infer missing details reasonably.
-        3. If specific details aren't provided, use defaults.
-        `;
-
-        const fullPrompt = `${systemPrompt}\n\nUser Prompt: ${prompt}`;
-
-        const result = await model.generateContent(fullPrompt);
-        const responseText = result.response.text();
-
-        console.log("Raw AI Response:", responseText);
-
-        let cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsedOrder = JSON.parse(cleanJson);
-
-        console.log("Parsed JSON:", parsedOrder);
+        // Enhance with simulated "AI" delay if needed, but instant is better
         res.json(parsedOrder);
 
     } catch (error) {
-        console.error("AI Parse Error:", error);
-        res.status(500).json({ message: "Failed to parse order. " + (error.message || "Unknown error") });
+        console.error("Local JS Parse Error:", error);
+        res.status(500).json({ message: "Failed to parse order locally." });
     }
 });
 
 router.post('/schedule-announcement', async (req, res) => {
     try {
-        if (!process.env.GEMINI_API_KEY) {
-            return res.status(500).json({ message: "GEMINI_API_KEY is not configured." });
-        }
-
         const { prompt } = req.body;
         if (!prompt) {
             return res.status(400).json({ message: "Prompt is required" });
         }
 
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        // Using a reliable model
-        const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+        // Simple echo/wrap for announcements
+        // In a real "AI" replacement, we might have templates.
 
-        const systemPrompt = `
-        You are a smart assistant for a Canteen Management System.
-        Your task is to take a user's intent to schedule an announcement and return a structured JSON object.
+        const suggestion = {
+            title: "Announcement",
+            content: prompt, // Just use the prompt as content for now
+            type: "Info",
+            targetAudience: "All",
+            scheduledDate: new Date(Date.now() + 60 * 60 * 1000).toISOString() // Default 1 hour from now
+        };
 
-        Target Schema (JSON only):
-        {
-            "title": "string (concise and catchy)",
-            "content": "string (detailed but professional announcement text)",
-            "type": "string (options: 'Info', 'Warning', 'Success', 'Alert')",
-            "targetAudience": "string (options: 'All', 'Students', 'hostel-a', 'hostel-b', 'hostel-c')",
-            "scheduledDate": "string (ISO 8601 format. If user says 'tomorrow morning', pick 9 AM tomorrow. If 'Friday evening', pick 6 PM Friday. Default to 1 hour from now if not specified)"
+        // Try to refine if prompt is short
+        if (prompt.toLowerCase().includes('holiday')) {
+            suggestion.title = "Holiday Notice";
+            suggestion.type = "Info";
+        } else if (prompt.toLowerCase().includes('urgent')) {
+            suggestion.title = "Urgent Attention";
+            suggestion.type = "Alert";
         }
-
-        Current Time: ${new Date().toISOString()}
-
-        Rules:
-        1. Return ONLY the JSON object. No markdown.
-        2. Make the announcement text engaging for students.
-        3. Infer the best audience and type based on the context.
-        `;
-
-        const fullPrompt = `${systemPrompt}\n\nUser Request: ${prompt}`;
-
-        const result = await model.generateContent(fullPrompt);
-        const responseText = result.response.text();
-
-        let cleanJson = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const suggestion = JSON.parse(cleanJson);
 
         res.json(suggestion);
 
     } catch (error) {
-        console.error("AI Schedule Error:", error);
-        res.status(500).json({ message: "AI failed to generate schedule. " + (error.message || "Unknown error") });
+        console.error("Local Schedule Error:", error);
+        res.status(500).json({ message: "Failed to generate schedule locally." });
     }
 });
 

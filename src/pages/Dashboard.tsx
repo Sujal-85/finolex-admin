@@ -102,7 +102,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Students"
           value={stats.totalStudents.toLocaleString()}
@@ -142,31 +142,36 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">
-        <Card className="col-span-4">
+        <Card className="col-span-1 lg:col-span-4">
           <CardHeader>
             <CardTitle>Revenue Trend</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pl-0">
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={analytics.revenueData}>
+              <LineChart data={analytics.revenueData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                <XAxis dataKey="month" stroke="#6b7280" />
-                <YAxis stroke="#6b7280" />
-                <Tooltip />
+                <XAxis dataKey="month" stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="#6b7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#fff', borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                  itemStyle={{ color: '#374151' }}
+                />
                 <Legend />
                 <Line
                   type="monotone"
                   dataKey="revenue"
                   stroke="#3b82f6"
                   strokeWidth={2}
-                  name="Revenue (₹)"
+                  name="Revenue"
+                  dot={{ r: 4, fill: "#3b82f6", strokeWidth: 2 }}
+                  activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        <Card className="col-span-3">
+        <Card className="col-span-1 lg:col-span-3">
           <CardHeader>
             <CardTitle>Payment Status</CardTitle>
           </CardHeader>
@@ -177,12 +182,9 @@ export default function Dashboard() {
                   data={analytics.paymentStatus}
                   cx="50%"
                   cy="50%"
-                  labelLine={false}
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
+                  innerRadius={60}
                   outerRadius={80}
-                  fill="#8884d8"
+                  paddingAngle={5}
                   dataKey="value"
                 >
                   {analytics.paymentStatus.map((entry: any, index: number) => (
@@ -190,6 +192,7 @@ export default function Dashboard() {
                   ))}
                 </Pie>
                 <Tooltip />
+                <Legend verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
