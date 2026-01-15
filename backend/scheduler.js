@@ -82,7 +82,13 @@ const initScheduler = (io) => {
                     student.balance = (student.balance || 0) + (activePlan.price || 3500);
                     student.paymentStatus = student.balance > 0 ? 'pending' : 'paid';
 
-                    await student.save();
+                    await Student.updateOne({ _id: student._id }, {
+                        $set: {
+                            activePlans: student.activePlans,
+                            balance: student.balance,
+                            paymentStatus: student.paymentStatus
+                        }
+                    });
                     updatedCount++;
                 }
             }
@@ -118,7 +124,7 @@ const initScheduler = (io) => {
                     if (daysSinceStart > 7) {
                         // Apply ₹5 fine
                         student.balance = (student.balance || 0) + 5;
-                        await student.save();
+                        await Student.updateOne({ _id: student._id }, { $set: { balance: student.balance } });
                         finedCount++;
 
                         await Notification.create({
@@ -142,60 +148,49 @@ const initScheduler = (io) => {
     });
 
     // 4. Random Daily Reminders (3 times between 8 AM - 11 PM IST)
-    cron.schedule('0 8 * * *', () => { // Schedules for the day at 8 AM
-        console.log('[Scheduler] Scheduling random reminders for the day...');
+    // 4. Fixed Daily Reminders (10 AM, 2 PM, 7 PM IST)
+    const sendReminders = async (batchName) => {
+        console.log(`[Scheduler] Sending ${batchName} Reminders...`);
+        try {
+            const studentsWithDues = await Student.find({ balance: { $gt: 0 } });
+            const now = new Date();
+            let reminderCount = 0;
 
-        // Window: 15 hours (8 AM to 11 PM) in milliseconds
-        const windowMs = 15 * 60 * 60 * 1000;
-
-        // Generate 3 random delays
-        const delays = [
-            Math.floor(Math.random() * windowMs),
-            Math.floor(Math.random() * windowMs),
-            Math.floor(Math.random() * windowMs)
-        ].sort((a, b) => a - b); // Sort to run in order
-
-        const sendReminders = async (batchNum) => {
-            console.log(`[Scheduler] Sending Batch ${batchNum} Reminders...`);
-            try {
-                const studentsWithDues = await Student.find({ balance: { $gt: 0 } });
-                const now = new Date();
-                let reminderCount = 0;
-
-                for (const student of studentsWithDues) {
-                    // Check if they have an active plan older than 7 days (same logic as fines)
-                    const activePlan = student.activePlans?.find(p => p.status === 'active' || p.status === 'pending');
-
-                    if (activePlan && activePlan.startDate) {
-                        const startDate = new Date(activePlan.startDate);
-                        const daysSinceStart = Math.floor((now - startDate) / (1000 * 60 * 60 * 24));
-
-                        if (daysSinceStart > 7) {
-                            await Notification.create({
-                                title: 'Overdue Payment Reminder',
-                                message: `Urgent: You have an outstanding balance of ₹${student.balance} causing daily fines. Please pay immediately.`,
-                                type: 'payment',
-                                recipient: student._id
-                            });
-                            reminderCount++;
-                        }
-                    }
-                }
-                console.log(`[Scheduler] Batch ${batchNum}: Sent overdue reminders to ${reminderCount} students.`);
-            } catch (err) {
-                console.error('[Scheduler] Reminder Batch Error:', err);
+            for (const student of studentsWithDues) {
+                // Simplified: Send reminder if balance > 0, regardless of plan status
+                await Notification.create({
+                    title: 'Overdue Payment Reminder',
+                    message: `Urgent: You have an outstanding balance of ₹${student.balance} causing daily fines. Please pay immediately.`,
+                    type: 'payment',
+                    recipient: student._id
+                });
+                reminderCount++;
             }
-        };
+            console.log(`[Scheduler] ${batchName}: Sent overdue reminders to ${reminderCount} students.`);
+        } catch (err) {
+            console.error('[Scheduler] Reminder Batch Error:', err);
+        }
+    };
 
-        // Schedule the timeouts
-        delays.forEach((delay, index) => {
-            setTimeout(() => sendReminders(index + 1), delay);
-            console.log(`[Scheduler] Reminder ${index + 1} scheduled in ${Math.round(delay / 60000)} minutes.`);
-        });
-    }, {
+    // Schedule: 10:00 AM
+    cron.schedule('0 10 * * *', () => sendReminders('Morning'), {
         scheduled: true,
         timezone: "Asia/Kolkata"
     });
+
+    // Schedule: 2:00 PM
+    cron.schedule('0 14 * * *', () => sendReminders('Afternoon'), {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
+
+    // Schedule: 7:00 PM
+    cron.schedule('0 19 * * *', () => sendReminders('Evening'), {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
+    });
+
+
 
     // 5. Keep-Alive Self Ping (Every 14 minutes, Active Hours Only)
     // Runs 00:00-00:59 and 07:00-23:59 IST.

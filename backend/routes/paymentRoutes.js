@@ -82,13 +82,51 @@ router.post('/', auth, async (req, res) => {
 
 router.patch('/:id', auth, async (req, res) => {
     try {
-        const payment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+        const { status } = req.body;
+        const payment = await Payment.findById(req.params.id);
+
         if (!payment) {
-            return res.status(404).send();
+            return res.status(404).json({ error: 'Payment not found' });
         }
-        res.send(payment);
+
+        // Check if status is changing to "Completed" from something else
+        if (status === 'Completed' && payment.status !== 'Completed') {
+            const updateData = { $inc: { balance: -payment.amount } };
+
+            // If it's a Meal Plan, extend the due date
+            if (payment.type === 'Meal Plan') {
+                const currentStudent = await mongoose.model('Student').findById(payment.studentId).select('nextDueDate');
+                let newDate = currentStudent?.nextDueDate ? new Date(currentStudent.nextDueDate) : new Date();
+
+                // If expired (date in past), start from today
+                if (newDate < new Date()) {
+                    newDate = new Date();
+                }
+
+                newDate.setDate(newDate.getDate() + 30);
+                updateData.nextDueDate = newDate;
+            }
+
+            // Deduct Balance
+            await mongoose.model('Student').findByIdAndUpdate(payment.studentId, updateData);
+
+            // Log Activity
+            await logActivity({
+                user: req.user.name || 'Admin',
+                action: 'Verified Payment',
+                module: 'payments',
+                details: `Verified payment of ₹${payment.amount} for ${payment.studentName}`,
+                ipAddress: req.ip
+            });
+        }
+
+        // Apply updates
+        const updatedPayment = await Payment.findByIdAndUpdate(req.params.id, req.body, { new: true, runValidators: true });
+
+        res.send(updatedPayment);
     } catch (error) {
-        res.status(400).send(error);
+        console.error('Payment Update Error:', error);
+        res.status(400).send({ error: error.message });
     }
 });
 
