@@ -9,6 +9,18 @@ const initScheduler = (io) => {
 
     // Run every minute (Announcements)
     cron.schedule('* * * * *', async () => {
+        const fs = require('fs');
+        const path = require('path');
+        const logPath = path.join(__dirname, 'scheduler_heartbeat.log');
+        const timestamp = new Date().toISOString();
+        const logMsg = `[${timestamp}] Scheduler Heartbeat - Active\n`;
+
+        try {
+            fs.appendFileSync(logPath, logMsg);
+        } catch (e) {
+            console.error("Logging failed", e);
+        }
+        console.log('[Scheduler Heartbeat] Checking for tasks...');
         try {
             const now = new Date();
             const scheduledAnnouncements = await Announcement.find({
