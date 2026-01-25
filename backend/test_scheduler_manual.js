@@ -174,6 +174,7 @@ const runTests = async () => {
                 reminderCount++;
             }
             console.log(`[Result] Sent reminders to ${reminderCount} students.`);
+            mockIo.emit('newNotification', { title: `${batchName} Reminders`, message: '...' });
         } catch (err) {
             console.error('Error testing reminders:', err);
         }
