@@ -271,7 +271,7 @@ const initScheduler = (io) => {
             });
             if (io) io.emit('newNotification', notification);
             console.log('[Scheduler] Dinner reminder sent.');
-            mockIo.emit('newNotification', { title: 'Dinner Served! 🍽️', message: '...' });
+            mockIo.emit('newNotification', { title: 'Dinner Served! 🍽️', message: '...' })6;
         } catch (err) {
             console.error('[Scheduler] Dinner Reminder Error:', err);
         }

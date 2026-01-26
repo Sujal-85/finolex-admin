@@ -43,7 +43,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Connect to the backend URL
-        const socketInstance = io("http://localhost:5000");
+        const socketURL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : "http://localhost:5000";
+        const socketInstance = io(socketURL);
 
         socketInstance.on("connect", () => {
             console.log("Socket connected:", socketInstance.id);

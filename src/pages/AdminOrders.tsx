@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/client';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, Filter, Calendar } from 'lucide-react';
 import { toast } from 'sonner';
@@ -14,7 +14,7 @@ const AdminOrders = () => {
     const updateStatus = async (id: string, newStatus: string) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.patch(`http://localhost:5000/api/orders/${id}/status`,
+            await api.patch(`/orders/${id}/status`,
                 { status: newStatus },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
@@ -36,7 +36,7 @@ const AdminOrders = () => {
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
-            const response = await axios.get('http://localhost:5000/api/orders', config);
+            const response = await api.get('/orders', config);
             setOrders(response.data);
             setLoading(false);
         } catch (error) {

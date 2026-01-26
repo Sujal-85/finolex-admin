@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/client';
 import { useNavigate } from 'react-router-dom';
 import { Calendar, CheckCircle, XCircle, Clock, Zap, Sparkles, ArrowRight, Loader2 } from 'lucide-react';
 
@@ -22,7 +22,7 @@ const AdminDashboard = () => {
             const config = {
                 headers: { Authorization: `Bearer ${token}` }
             };
-            const response = await axios.get('http://localhost:5000/api/orders', config);
+            const response = await api.get('/orders', config);
             const fetchedOrders = response.data;
             setOrders(fetchedOrders);
 
@@ -43,7 +43,7 @@ const AdminDashboard = () => {
     const updateStatus = async (id: string, newStatus: string) => {
         try {
             const token = localStorage.getItem('token');
-            await axios.patch(`http://localhost:5000/api/orders/${id}/status`, { status: newStatus }, {
+            await api.patch(`/orders/${id}/status`, { status: newStatus }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             fetchOrders(); // Refresh
@@ -69,7 +69,7 @@ const AdminDashboard = () => {
         try {
             const token = localStorage.getItem('token');
             // Assuming we have an API endpoint for this now
-            const res = await axios.post('http://localhost:5000/api/ai/parse-order',
+            const res = await api.post('/ai/parse-order',
                 { prompt: aiPrompt },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
