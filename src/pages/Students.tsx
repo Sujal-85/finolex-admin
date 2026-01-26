@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
-import { Search, Filter, Download, UserPlus, MoreHorizontal } from "lucide-react";
+import { Search, Filter, Download, UserPlus, MoreHorizontal, FileText, Loader2 } from "lucide-react";
+import { jsPDF } from "jspdf";
+import autoTable from "jspdf-autotable";
+import { generatePDFReport } from "@/utils/pdfGenerator";
+import { generateDOCXReport } from "@/utils/docxGenerator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -54,6 +58,7 @@ interface Student {
   generatedPassword?: string;
   currentPlan?: string;
   phone?: string;
+  profileImage?: string;
 }
 
 export default function Students() {
@@ -71,6 +76,7 @@ export default function Students() {
   // Filter State
   const [statusFilter, setStatusFilter] = useState("all");
   const [yearFilter, setYearFilter] = useState("all");
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     fetchStudents();
@@ -106,79 +112,232 @@ export default function Students() {
     document.body.removeChild(link);
   };
 
-  const handleExportAll = () => {
+  const handleExportAll = (fileFormat: 'PDF' | 'DOCX' = 'DOCX') => {
+    setIsExporting(true);
     if (students.length === 0) {
+      setIsExporting(false);
       toast.error("No students to export");
       return;
     }
 
-    const headers = ["Name", "DOB", "Email", "Phone", "Year", "Hostel", "Status", "Plan", "Balance"];
-    const csvContent = [
-      headers.join(","),
-      ...students.map(student => [
-        `"${student.name}"`,
+    try {
+      const headers = ["Name", "DOB", "Email", "Phone", "Year", "Hostel", "Status", "Plan", "Balance"];
+      const data = students.map(student => [
+        student.name,
         student.dob ? format(new Date(student.dob), "MMM dd, yyyy") : "-",
         student.email,
         student.phone || "-",
         student.year,
         student.hostelDetails?.hostelName || '',
         student.status,
-        `"${student.currentPlan || '-'}"`,
+        student.currentPlan || '-',
         student.balance
-      ].join(","))
-    ].join("\n");
+      ]);
 
-    downloadCSV(csvContent, "students_all.csv");
+      if (fileFormat === 'PDF') {
+        const csvContent = [
+          headers.join(","),
+          ...data.map(row => row.map(v => `"${v}"`).join(","))
+        ].join("\n");
+        downloadCSV(csvContent, "students_all.csv");
+      } else {
+        generateDOCXReport("All Students Report", headers, data, "students_all");
+      }
+    } finally {
+      setIsExporting(false);
+    }
   };
 
-  const handleExportDues = () => {
+  const handleExportUnpaidPDF = async (fileFormat: 'PDF' | 'DOCX' = 'PDF') => {
+    setIsExporting(true);
     const studentsWithDues = students.filter(s => s.balance > 0);
 
     if (studentsWithDues.length === 0) {
+      setIsExporting(false);
       toast.error("No students with outstanding dues found");
       return;
     }
 
-    // Group by plan
-    const groupedByPlan: Record<string, Student[]> = {};
-    studentsWithDues.forEach(student => {
-      const plan = student.currentPlan || "No Plan";
-      if (!groupedByPlan[plan]) {
-        groupedByPlan[plan] = [];
+    try {
+      if (fileFormat === 'DOCX') {
+        const headers = ["Name", "Enrollment No", "Year", "Plan", "Balance"];
+        const data = studentsWithDues.map(s => [s.name, s.enrollmentNo || "-", s.year, s.currentPlan || "-", s.balance]);
+        await generateDOCXReport("Outstanding Dues Report", headers, data, `Unpaid_Students_${format(new Date(), "yyyy-MM-dd")}`);
+        setIsExporting(false);
+        return;
       }
-      groupedByPlan[plan].push(student);
-    });
 
-    // Build CSV content with sections
-    let csvContent = "Plan,Name,Email,Phone,Hostel,Room,Balance\n";
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const margin = 14;
 
-    Object.keys(groupedByPlan).forEach(planName => {
-      // Add a header/separator row for the plan
-      // csvContent += `\n--- ${planName} ---\n`; 
-      // Actually, keeping it tabular is better for Excel, but user asked for "separate".
-      // Let's list them with the Plan column filled, but maybe sorted?
-      // Or we can add a row "Plan: X" then the students.
-      // Let's stick to standard CSV with Plan column, but let's confirm the user's "separate list" request.
-      // "list will be made accordingly separate for each plan" -> This implies visual separation or separate files.
-      // Separate files is bad UX for web (multiple downloads). 
-      // Let's do a single file with groupings.
+      // Helper to load image
+      const loadImage = (src: string): Promise<HTMLImageElement> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.src = src;
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+        });
+      };
 
-      const studentsInPlan = groupedByPlan[planName];
-      studentsInPlan.forEach(student => {
-        csvContent += [
-          `"${planName}"`,
-          `"${student.name}"`,
-          student.email,
-          student.phone || "-",
-          student.hostelDetails?.hostelName || '',
-          student.hostelDetails?.roomNo || '',
-          student.balance
-        ].join(",") + "\n";
+      toast.loading("Generating PDF...", { id: "pdf-gen" });
+
+      // Load Assets
+      const [famtLogo, canteenLogo, signature] = await Promise.all([
+        loadImage('/famt-logo.png'),
+        loadImage('/logo.png'),
+        loadImage('/manager_signature.png')
+      ]);
+
+      // --- Header ---
+      doc.addImage(famtLogo, 'PNG', margin, 10, 25, 25);
+      doc.addImage(canteenLogo, 'PNG', pageWidth - margin - 25, 10, 25, 25);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(22);
+      doc.setTextColor(0, 51, 102);
+      doc.text("Prasanna Caterers", pageWidth / 2, 22, { align: "center" });
+
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(100);
+      doc.text("Finolex Academy of Management and Technology, Ratnagiri", pageWidth / 2, 28, { align: "center" });
+
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(180, 0, 0); // Red for "Unpaid"
+      doc.text("Pending Balance Report", pageWidth / 2, 38, { align: "center" });
+
+      doc.setDrawColor(200);
+      doc.line(margin, 42, pageWidth - margin, 42);
+
+      doc.setFontSize(9);
+      doc.setTextColor(80);
+      doc.text(`Report Generated: ${format(new Date(), "PPP p")}`, margin, 48);
+
+      // --- Content ---
+      const groupedByPlan: Record<string, Student[]> = {};
+      studentsWithDues.forEach(student => {
+        const plan = student.currentPlan || "No Active Plan";
+        if (!groupedByPlan[plan]) groupedByPlan[plan] = [];
+        groupedByPlan[plan].push(student);
       });
-    });
 
-    downloadCSV(csvContent, "students_outstanding_dues.csv");
-    toast.success(`Exported ${studentsWithDues.length} records with dues`);
+      let currentY = 55;
+
+      Object.entries(groupedByPlan).forEach(([planName, planStudents]) => {
+        if (currentY > 240) {
+          doc.addPage();
+          currentY = 20;
+        }
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(0);
+        doc.text(`Plan: ${planName}`, margin, currentY);
+        currentY += 5;
+
+        autoTable(doc, {
+          startY: currentY,
+          head: [['Name', 'Year', 'Hostel', 'Phone', 'Balance']],
+          body: planStudents.map(s => [
+            s.name,
+            s.year,
+            `${s.hostelDetails?.hostelName || '-'} (${s.hostelDetails?.roomNo || '-'})`,
+            s.phone || '-',
+            `Rs. ${s.balance.toLocaleString()}`
+          ]),
+          margin: { left: margin, right: margin },
+          theme: 'grid',
+          headStyles: { fillColor: [41, 128, 185], textColor: 255 },
+          styles: { fontSize: 9 },
+          didDrawPage: (data) => {
+            currentY = data.cursor?.y || currentY;
+          }
+        });
+
+        currentY += 15;
+      });
+
+      // --- Footer / Signature ---
+      if (currentY > 250) {
+        doc.addPage();
+        currentY = 40;
+      } else {
+        currentY += 10;
+      }
+
+      const sigWidth = 40;
+      const sigHeight = 20;
+      doc.addImage(signature, 'PNG', pageWidth - margin - sigWidth, currentY, sigWidth, sigHeight);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(0);
+      doc.text("Manager Signature", pageWidth - margin - (sigWidth / 2), currentY + sigHeight + 5, { align: "center" });
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(150);
+      const footerText = "Generated via Finolex Canteen Admin Portal";
+      doc.text(footerText, pageWidth / 2, 285, { align: "center" });
+
+      doc.save(`Pending_Balances_${format(new Date(), "yyyy-MM-dd")}.pdf`);
+      toast.success("PDF generated successfully!", { id: "pdf-gen" });
+
+    } catch (error) {
+      console.error("Export error:", error);
+      toast.error("Failed to generate report.", { id: "pdf-gen" });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportDues = () => {
+    setIsExporting(true);
+    const studentsWithDues = students.filter(s => s.balance > 0);
+
+    if (studentsWithDues.length === 0) {
+      setIsExporting(false);
+      toast.error("No students with outstanding dues found");
+      return;
+    }
+
+    try {
+      // Group by plan
+      const groupedByPlan: Record<string, Student[]> = {};
+      studentsWithDues.forEach(student => {
+        const plan = student.currentPlan || "No Plan";
+        if (!groupedByPlan[plan]) {
+          groupedByPlan[plan] = [];
+        }
+        groupedByPlan[plan].push(student);
+      });
+
+      // Build CSV content with sections
+      let csvContent = "Plan,Name,Email,Phone,Hostel,Room,Balance\n";
+
+      Object.keys(groupedByPlan).forEach(planName => {
+        const studentsInPlan = groupedByPlan[planName];
+        studentsInPlan.forEach(student => {
+          csvContent += [
+            `"${planName}"`,
+            `"${student.name}"`,
+            student.email,
+            student.phone || "-",
+            student.hostelDetails?.hostelName || '',
+            student.hostelDetails?.roomNo || '',
+            student.balance
+          ].join(",") + "\n";
+        });
+      });
+
+      downloadCSV(csvContent, "students_outstanding_dues.csv");
+      toast.success(`Exported ${studentsWithDues.length} records with dues`);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const handleEdit = (student: Student) => {
@@ -258,7 +417,20 @@ export default function Students() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {isExporting && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+            <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-blue-50 shadow-inner ring-1 ring-blue-100">
+              <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+            </div>
+            <div className="space-y-1 text-center">
+              <p className="text-xl font-bold text-gray-800">Processing Report</p>
+              <p className="text-sm text-gray-500 animate-pulse">Building your PDF, please wait...</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold">Students</h1>
@@ -269,17 +441,45 @@ export default function Students() {
         <div className="flex flex-wrap gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                className="gap-2 border-danger text-danger hover:bg-danger-light"
+              >
+                <FileText className="h-4 w-4" />
+                <span className="hidden sm:inline">Unpaid Students Report</span>
+                <span className="sm:hidden">Unpaid Report</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExportUnpaidPDF('PDF')}>
+                <Download className="mr-2 h-4 w-4" />
+                Export PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportUnpaidPDF('DOCX')}>
+                <FileText className="mr-2 h-4 w-4" />
+                Export DOCX
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
               <Button variant="outline" className="gap-2">
                 <Download className="h-4 w-4" />
                 Export
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleExportAll}>
-                Export All
+              <DropdownMenuItem onClick={() => handleExportAll('PDF')}>
+                <Download className="mr-2 h-4 w-4" />
+                Export All (CSV)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExportAll('DOCX')}>
+                <FileText className="mr-2 h-4 w-4" />
+                Export All (DOCX)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleExportDues}>
-                Export Dues
+                <Download className="mr-2 h-4 w-4" />
+                Export Dues (CSV)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

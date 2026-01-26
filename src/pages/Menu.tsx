@@ -330,14 +330,14 @@ export default function Menu() {
 
       {/* Add/Edit Item Modal */}
       <Dialog open={showItemModal} onOpenChange={setShowItemModal}>
-        <DialogContent>
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[95vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>{editingItem ? "Edit Menu Item" : "Add Menu Item"}</DialogTitle>
             <DialogDescription>
               {selectedMealType.charAt(0).toUpperCase() + selectedMealType.slice(1)} for {selectedDay}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4 custom-scrollbar">
             <div className="space-y-2">
               <Label htmlFor="itemName">Item Name *</Label>
               <Input
@@ -366,7 +366,7 @@ export default function Menu() {
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 placeholder="Brief description of the dish"
-                rows={3}
+                rows={4}
               />
             </div>
 
@@ -380,8 +380,8 @@ export default function Menu() {
               />
             </div>
 
-            <div className="flex items-center justify-between">
-              <Label htmlFor="special">Mark as Special</Label>
+            <div className="flex items-center justify-between pt-2">
+              <Label htmlFor="special" className="cursor-pointer">Mark as Special</Label>
               <Switch
                 id="special"
                 checked={formData.isSpecial}
@@ -389,11 +389,11 @@ export default function Menu() {
               />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowItemModal(false)}>
+          <DialogFooter className="p-6 pt-2 border-t mt-auto">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowItemModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveItem}>
+            <Button className="w-full sm:w-auto" onClick={handleSaveItem}>
               {editingItem ? "Update" : "Add"} Item
             </Button>
           </DialogFooter>

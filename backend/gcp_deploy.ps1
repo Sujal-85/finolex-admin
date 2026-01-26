@@ -37,7 +37,7 @@ gcloud run deploy finolex-backend `
     --platform managed `
     --allow-unauthenticated `
     --port 5000 `
-    --set-env-vars NODE_ENV=production
+    --update-env-vars "^,^NODE_ENV=production,MONGODB_URI=mongodb+srv://finolex_admin:finolex_admin@mess.dqhbzlz.mongodb.net/finolex_canteen?appName=Mess,JWT_SECRET=prasanna_caterers,CLOUDINARY_CLOUD_NAME=df0pkn199,CLOUDINARY_API_KEY=191429622992698,CLOUDINARY_API_SECRET=K417jUggqsIaJo1QbMEs9R0K2Fw,GEMINI_API_KEY=AIzaSyBeLz3RwbIi9NRe7pSyEvxLl52CdUXGBjI,SERVER_URL=https://finolex-backend-334321723232.us-central1.run.app,N8N_WEBHOOK_URL=https://agentic-workflow.app.n8n.cloud/webhook/29b0d2f1-ea77-4c51-ba3e-9757ed5bdf71"
 
 Write-Host "=========================================" -ForegroundColor Green
 Write-Host "Deployment Complete!" -ForegroundColor Green

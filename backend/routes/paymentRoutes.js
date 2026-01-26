@@ -3,6 +3,7 @@ const Payment = require('../models/Payment');
 const Notification = require('../models/Notification');
 const auth = require('../middleware/auth');
 const logActivity = require('../utils/activityLogger');
+const { sendNotification } = require('../utils/n8nService');
 const router = express.Router();
 
 const mongoose = require('mongoose');
@@ -70,9 +71,25 @@ router.post('/', auth, async (req, res) => {
 
         await mongoose.model('Student').findByIdAndUpdate(payment.studentId, updateData);
 
-
         // Emit real-time event
         req.io.emit('payment_updated', payment);
+
+        // Send Email Notification via n8n (Non-blocking)
+        try {
+            await sendNotification({
+                type: 'new_payment',
+                subject: `Payment Received: ₹${payment.amount}`,
+                message: `Received payment of ₹${payment.amount} from ${payment.studentName}.`,
+                details: {
+                    amount: payment.amount,
+                    studentName: payment.studentName,
+                    transactionId: payment.transactionId,
+                    type: payment.type
+                }
+            });
+        } catch (notifyError) {
+            console.error("Notification Error (Payment Processed Successfully):", notifyError);
+        }
 
         res.status(201).send(payment);
     } catch (error) {

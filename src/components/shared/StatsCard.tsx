@@ -6,9 +6,7 @@ interface StatsCardProps {
   value: string | number;
   change?: string;
   changeType?: "positive" | "negative" | "neutral";
-  icon: LucideIcon;
-  iconBgColor?: string;
-  iconColor?: string;
+  className?: string;
 }
 
 export function StatsCard({
@@ -16,19 +14,17 @@ export function StatsCard({
   value,
   change,
   changeType = "neutral",
-  icon: Icon,
-  iconBgColor = "bg-primary-light",
-  iconColor = "text-primary",
+  className = "",
 }: StatsCardProps) {
   const changeColorClass =
     changeType === "positive"
       ? "text-success"
       : changeType === "negative"
-      ? "text-danger"
-      : "text-muted-foreground";
+        ? "text-danger"
+        : "text-muted-foreground";
 
   return (
-    <Card className="transition-all hover:shadow-md">
+    <Card className={`transition-all hover:shadow-md ${className}`}>
       <CardContent className="p-6">
         <div className="flex items-center justify-between">
           <div className="space-y-1">
@@ -39,9 +35,6 @@ export function StatsCard({
                 {change}
               </p>
             )}
-          </div>
-          <div className={`rounded-lg ${iconBgColor} p-3`}>
-            <Icon className={`h-6 w-6 ${iconColor}`} />
           </div>
         </div>
       </CardContent>

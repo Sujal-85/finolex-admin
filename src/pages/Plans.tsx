@@ -313,14 +313,14 @@ export default function Plans() {
 
       {/* Add/Edit Modal */}
       <Dialog open={showModal} onOpenChange={setShowModal}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[95vh] flex flex-col p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-2">
             <DialogTitle>{editingPlan ? "Edit Plan" : "Create New Plan"}</DialogTitle>
             <DialogDescription>
               {editingPlan ? "Update plan details" : "Add a new mess plan"}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
+          <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4 custom-scrollbar">
             <div className="space-y-2">
               <Label htmlFor="name">Plan Name *</Label>
               <Input
@@ -342,7 +342,7 @@ export default function Plans() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="startDate">Start Date</Label>
                 <Input
@@ -370,11 +370,11 @@ export default function Plans() {
                 value={formData.features}
                 onChange={(e) => setFormData({ ...formData, features: e.target.value })}
                 placeholder="Breakfast, Lunch, Dinner, Weekend Specials"
-                rows={3}
+                rows={4}
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 pb-2">
               <Label>Rebate Policy PDF</Label>
               {formData.rebatePdfUrl ? (
                 <div className="flex items-center justify-between p-2 border rounded-md bg-muted/30">
@@ -416,11 +416,11 @@ export default function Plans() {
               )}
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowModal(false)}>
+          <DialogFooter className="p-6 pt-2 border-t mt-auto">
+            <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isUploading}>
+            <Button className="w-full sm:w-auto" onClick={handleSave} disabled={isUploading}>
               {editingPlan ? "Update" : "Create"} Plan
             </Button>
           </DialogFooter>

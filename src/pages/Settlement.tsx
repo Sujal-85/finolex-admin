@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { Loader } from '@/components/ui/loader';
 import api from '@/api/client';
 import { DollarSign, Ticket, Calculator } from 'lucide-react';
 
 const Settlement = () => {
     const [summary, setSummary] = useState<any>(null);
-    const [loading, setLoading] = useState(true);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         fetchSummary();
@@ -13,19 +14,23 @@ const Settlement = () => {
 
     const fetchSummary = async () => {
         try {
+            setIsLoading(true);
             const response = await api.get('/settlements/summary');
             setSummary(response.data);
-            setLoading(false);
+            setIsLoading(false);
         } catch (error: any) {
             console.error("Error fetching settlement summary", error);
             if (error.response) {
                 console.error("Details:", error.response.data);
             }
-            setLoading(false);
+            setIsLoading(false);
         }
     };
 
-    if (loading) return <div className="p-8 text-center">Loading...</div>;
+  if (isLoading) {
+      return <Loader />;
+    }
+  
     if (!summary) return <div className="p-8 text-center text-red-500">Failed to load settlement data. Please try again.</div>;
 
     return (

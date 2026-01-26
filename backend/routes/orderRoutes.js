@@ -4,6 +4,8 @@ const Order = require('../models/Order');
 const Coupon = require('../models/Coupon'); // Needed for generating coupons
 const { protect, isAdmin, isManager } = require('../middleware/authMiddleware');
 
+const { sendNotification } = require('../utils/n8nService');
+
 // @desc    Create new order
 // @route   POST /api/orders
 // @access  Admin
@@ -41,6 +43,26 @@ router.post('/', protect, isAdmin, async (req, res) => {
         });
 
         const createdOrder = await order.save();
+
+        // Send Email Notification via n8n (Non-blocking)
+        try {
+            await sendNotification({
+                type: 'new_order',
+                subject: `New Order: ${eventName}`,
+                message: `A new order has been created for ${numberOfPersons} people on ${date}.`,
+                details: {
+                    orderId: createdOrder._id,
+                    eventName,
+                    department,
+                    venue,
+                    totalAmount
+                }
+            });
+        } catch (notifyError) {
+            console.error("Notification Error (Order Created Successfully):", notifyError);
+            // Do not fail the request
+        }
+
         res.status(201).json(createdOrder);
     } catch (error) {
         console.error("Create Order Error:", error);

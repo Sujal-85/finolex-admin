@@ -242,15 +242,15 @@ export default function Inventory() {
             </Card>
 
             <Dialog open={showModal} onOpenChange={setShowModal}>
-                <DialogContent>
-                    <DialogHeader>
+                <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[95vh] flex flex-col p-0 overflow-hidden">
+                    <DialogHeader className="p-6 pb-2">
                         <DialogTitle>{editingItem ? "Edit Item" : "Add New Item"}</DialogTitle>
                         <DialogDescription>Enter the details of the inventory item.</DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                    <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4 custom-scrollbar">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="name">Item Name</Label>
+                                <Label htmlFor="name">Item Name *</Label>
                                 <Input
                                     id="name"
                                     value={formData.name}
@@ -259,7 +259,7 @@ export default function Inventory() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="category">Category</Label>
+                                <Label htmlFor="category">Category *</Label>
                                 <Select
                                     value={formData.category}
                                     onValueChange={(value) => setFormData({ ...formData, category: value })}
@@ -278,9 +278,9 @@ export default function Inventory() {
                                 </Select>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label htmlFor="quantity">Quantity</Label>
+                                <Label htmlFor="quantity">Quantity *</Label>
                                 <Input
                                     id="quantity"
                                     type="number"
@@ -289,7 +289,7 @@ export default function Inventory() {
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="unit">Unit</Label>
+                                <Label htmlFor="unit">Unit *</Label>
                                 <Select
                                     value={formData.unit}
                                     onValueChange={(value) => setFormData({ ...formData, unit: value })}
@@ -306,9 +306,9 @@ export default function Inventory() {
                                 </Select>
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-2">
                             <div className="space-y-2">
-                                <Label htmlFor="threshold">Min Threshold</Label>
+                                <Label htmlFor="threshold">Min Threshold *</Label>
                                 <Input
                                     id="threshold"
                                     type="number"
@@ -327,9 +327,9 @@ export default function Inventory() {
                             </div>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
-                        <Button onClick={handleSaveItem}>Save Item</Button>
+                    <DialogFooter className="p-6 pt-2 border-t mt-auto">
+                        <Button variant="outline" className="w-full sm:w-auto" onClick={() => setShowModal(false)}>Cancel</Button>
+                        <Button className="w-full sm:w-auto" onClick={handleSaveItem}>Save Item</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

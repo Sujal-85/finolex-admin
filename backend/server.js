@@ -42,17 +42,6 @@ app.use((req, res, next) => {
     next();
 });
 
-// Database Connection
-mongoose.connect(process.env.MONGODB_URI)
-    .then(async () => {
-        console.log('Connected to MongoDB');
-        // Auto-fix indexes to remove ghosts like 'username'
-        const User = require('./models/User');
-        await User.syncIndexes();
-        console.log('User Indexes Synced');
-    })
-    .catch((err) => console.error('MongoDB connection error:', err));
-
 console.log('Registering Routes...');
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentRoutes);
@@ -78,7 +67,6 @@ app.use('/api/activity-logs', require('./routes/activityLogRoutes'));
 app.use('/api/ai', require('./routes/aiRoutes'));
 app.use('/api/receipts', require('./routes/receiptRoutes'));
 
-
 // Keep-Alive Endpoint
 app.get('/ping', (req, res) => {
     res.status(200).send('pong');
@@ -98,9 +86,41 @@ io.on('connection', (socket) => {
     });
 });
 
-// Start Server
+// Database Connection
+mongoose.connection.on('connecting', () => console.error("⏳ MongoDB: Connecting..."));
+mongoose.connection.on('connected', () => console.error("✅ MongoDB: Connected"));
+mongoose.connection.on('disconnecting', () => console.error("🔌 MongoDB: Disconnecting..."));
+mongoose.connection.on('disconnected', () => console.error("❌ MongoDB: Disconnected"));
+mongoose.connection.on('error', (err) => console.error("💥 MongoDB Error:", err));
+
+console.error("DEBUG: MONGODB_URI starts with: " + (process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 15) + "..." : "UNDEFINED"));
+
+mongoose.connect(process.env.MONGODB_URI, {
+    family: 4, // Force IPv4
+    serverSelectionTimeoutMS: 5000,
+    socketTimeoutMS: 45000,
+})
+    .then(async () => {
+        console.log('✅ Connected to MongoDB');
+
+        // Auto-fix indexes
+        try {
+            const User = require('./models/User');
+            await User.syncIndexes();
+            console.log('User Indexes Synced');
+        } catch (idxError) {
+            console.warn('Index sync failed:', idxError.message);
+        }
+    })
+    .catch((err) => {
+        console.error('❌ MongoDB Connection Error:', err);
+        // Do not exit, keep server running to serve health checks (though API will fail)
+    });
+
+// Start Server IMMEDIATELY to satisfy Cloud Run start probe
 server.listen(PORT, () => {
-    console.log(`Server is running on port ${PORT}`);
+    console.log(`🚀 Server is running on port ${PORT}`);
+
     // Initialize Scheduler
     const initScheduler = require('./scheduler');
     initScheduler(io);

@@ -175,90 +175,90 @@ export default function Settings() {
   if (isLoading) return <Loader />;
 
   return (
-    <div className="p-6 bg-slate-50 min-h-screen">
-      <div className="max-w-6xl mx-auto space-y-8">
+    <div className="p-4 sm:p-6 bg-slate-50 min-h-screen">
+      <div className="max-w-6xl mx-auto space-y-6 sm:space-y-8">
 
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center text-slate-700">
-              <Sliders size={24} />
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white rounded-xl shadow-sm border border-slate-200 flex items-center justify-center text-slate-700">
+              <Sliders size={20} className="sm:w-6 sm:h-6" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-slate-800">Settings</h1>
-              <p className="text-slate-500">Manage application configuration</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-800">Settings</h1>
+              <p className="text-xs sm:text-sm text-slate-500">Manage application configuration</p>
             </div>
           </div>
-          <Button onClick={handleSaveAll} className="bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200">
+          <Button onClick={handleSaveAll} className="w-full sm:w-auto bg-slate-900 hover:bg-slate-800 text-white shadow-lg shadow-slate-200">
             <Save className="h-4 w-4 mr-2" />
             Save Changes
           </Button>
         </div>
 
         <Tabs defaultValue="general" className="space-y-6">
-          <TabsList className="bg-white p-1 border border-slate-200 rounded-xl shadow-sm flex flex-wrap h-auto gap-1 w-full justify-start">
-            <TabsTrigger value="general" className="px-4 py-2 flex-grow sm:flex-grow-0 text-sm rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">General</TabsTrigger>
-            <TabsTrigger value="orders" className="px-4 py-2 flex-grow sm:flex-grow-0 text-sm rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">Order Config</TabsTrigger>
-            <TabsTrigger value="users" className="px-4 py-2 flex-grow sm:flex-grow-0 text-sm rounded-lg data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">Admin Account</TabsTrigger>
-            <TabsTrigger value="notifications" className="px-4 py-2 flex-grow sm:flex-grow-0 text-sm rounded-lg data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700">Notifications</TabsTrigger>
+          <TabsList className="bg-white p-1 border border-slate-200 rounded-xl shadow-sm flex flex-wrap h-auto gap-1 w-full justify-start overflow-x-auto">
+            <TabsTrigger value="general" className="px-3 sm:px-4 py-2 flex-grow sm:flex-grow-0 text-xs sm:text-sm rounded-lg data-[state=active]:bg-slate-100 data-[state=active]:text-slate-900">General</TabsTrigger>
+            <TabsTrigger value="orders" className="px-3 sm:px-4 py-2 flex-grow sm:flex-grow-0 text-xs sm:text-sm rounded-lg data-[state=active]:bg-blue-50 data-[state=active]:text-blue-700">Order Config</TabsTrigger>
+            <TabsTrigger value="users" className="px-3 sm:px-4 py-2 flex-grow sm:flex-grow-0 text-xs sm:text-sm rounded-lg data-[state=active]:bg-purple-50 data-[state=active]:text-purple-700">Admin Account</TabsTrigger>
+            <TabsTrigger value="notifications" className="px-3 sm:px-4 py-2 flex-grow sm:flex-grow-0 text-xs sm:text-sm rounded-lg data-[state=active]:bg-amber-50 data-[state=active]:text-amber-700">Notifications</TabsTrigger>
           </TabsList>
 
           {/* General Settings */}
           <TabsContent value="general" className="space-y-6">
             <Card className="border-slate-100 shadow-sm">
-              <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
-                <div className="w-10 h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <Building size={20} />
+              <CardHeader className="flex flex-row items-center gap-3 sm:gap-4 space-y-0 pb-2 p-4 sm:p-6">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Building size={18} className="sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">College Information</CardTitle>
-                  <CardDescription>Details used in headers and reports</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">College Information</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Details used in headers and reports</CardDescription>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6 pt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <CardContent className="space-y-6 pt-2 sm:pt-6 p-4 sm:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
-                    <Label htmlFor="collegeName">College Name (Header Line 2)</Label>
+                    <Label htmlFor="collegeName" className="text-xs sm:text-sm">College Name (Header Line 2)</Label>
                     <Input
                       id="collegeName"
                       value={generalSettings.collegeName}
                       onChange={(e) => setGeneralSettings({ ...generalSettings, collegeName: e.target.value })}
-                      className="bg-slate-50 border-slate-200"
+                      className="bg-slate-50 border-slate-200 text-sm sm:text-base h-10"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="canteenName">Canteen Name (Header Line 1)</Label>
+                    <Label htmlFor="canteenName" className="text-xs sm:text-sm">Canteen Name (Header Line 1)</Label>
                     <Input
                       id="canteenName"
                       value={generalSettings.canteenName}
                       onChange={(e) => setGeneralSettings({ ...generalSettings, canteenName: e.target.value })}
-                      className="bg-slate-50 border-slate-200"
+                      className="bg-slate-50 border-slate-200 text-sm sm:text-base h-10"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="address">Address & Footer Text</Label>
+                  <Label htmlFor="address" className="text-xs sm:text-sm">Address & Footer Text</Label>
                   <Textarea
                     id="address"
                     value={generalSettings.address}
                     onChange={(e) => setGeneralSettings({ ...generalSettings, address: e.target.value })}
                     rows={3}
-                    className="bg-slate-50 border-slate-200"
+                    className="bg-slate-50 border-slate-200 text-sm sm:text-base"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>College Logo</Label>
-                  <div className="flex items-center gap-6 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                    <div className="h-24 w-24 bg-white rounded-lg flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm relative">
+                  <Label className="text-xs sm:text-sm">College Logo</Label>
+                  <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6 p-4 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                    <div className="h-20 w-20 sm:h-24 sm:w-24 bg-white rounded-lg flex items-center justify-center overflow-hidden border border-slate-100 shadow-sm relative">
                       {logoPreview ? (
                         <img src={logoPreview} alt="Logo" className="h-full w-full object-contain p-2" />
                       ) : (
-                        <span className="text-xs text-slate-400">No Logo</span>
+                        <span className="text-[10px] text-slate-400">No Logo</span>
                       )}
                     </div>
-                    <div>
+                    <div className="flex flex-col items-center sm:items-start w-full sm:w-auto">
                       <input
                         type="file"
                         ref={fileInputRef}
@@ -266,11 +266,11 @@ export default function Settings() {
                         accept="image/*"
                         onChange={handleLogoChange}
                       />
-                      <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
+                      <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="w-full sm:w-auto">
                         <Upload className="h-4 w-4 mr-2" />
                         Upload New Logo
                       </Button>
-                      <p className="text-xs text-slate-500 mt-2">Recommended: PNG / Transparent background</p>
+                      <p className="text-[10px] sm:text-xs text-slate-500 mt-2 text-center sm:text-left">Recommended: PNG / Transparent background</p>
                     </div>
                   </div>
                 </div>
@@ -278,32 +278,32 @@ export default function Settings() {
             </Card>
           </TabsContent>
 
-          {/* Order Configuration (NEW RELEVANT FEATURE) */}
+          {/* Order Configuration */}
           <TabsContent value="orders" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* Departments Manager */}
               <Card className="border-slate-100 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg">Departments</CardTitle>
-                  <CardDescription>Manage departments listed in Create Order</CardDescription>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="text-base sm:text-lg">Departments</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Manage departments listed in Create Order</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Add Department (e.g. IT)"
+                      placeholder="Add (e.g. IT)"
                       value={newDepartment}
                       onChange={(e) => setNewDepartment(e.target.value)}
-                      className="bg-slate-50"
+                      className="bg-slate-50 h-10 text-sm"
                       onKeyDown={(e) => e.key === 'Enter' && addDepartment()}
                     />
-                    <Button onClick={addDepartment} size="icon" className="shrink-0 bg-blue-600 hover:bg-blue-700">
+                    <Button onClick={addDepartment} size="icon" className="shrink-0 bg-blue-600 hover:bg-blue-700 h-10 w-10">
                       <Plus size={18} />
                     </Button>
                   </div>
-                  <div className="flex flex-wrap gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 mt-2 sm:mt-4">
                     {generalSettings.departments.map((dept, idx) => (
-                      <div key={idx} className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 group">
+                      <div key={idx} className="bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 group">
                         {dept}
                         <button onClick={() => removeDepartment(dept)} className="text-blue-400 hover:text-blue-800 transition-colors">
                           <X size={14} />
@@ -316,26 +316,26 @@ export default function Settings() {
 
               {/* Service Types Manager */}
               <Card className="border-slate-100 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="text-lg">Service Types</CardTitle>
-                  <CardDescription>Define standard services offered</CardDescription>
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="text-base sm:text-lg">Service Types</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Define standard services offered</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-4">
+                <CardContent className="space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
                   <div className="flex gap-2">
                     <Input
-                      placeholder="Add Service (e.g. Lunch)"
+                      placeholder="Add (e.g. Lunch)"
                       value={newService}
                       onChange={(e) => setNewService(e.target.value)}
-                      className="bg-slate-50"
+                      className="bg-slate-50 h-10 text-sm"
                       onKeyDown={(e) => e.key === 'Enter' && addService()}
                     />
-                    <Button onClick={addService} size="icon" className="shrink-0 bg-emerald-600 hover:bg-emerald-700">
+                    <Button onClick={addService} size="icon" className="shrink-0 bg-emerald-600 hover:bg-emerald-700 h-10 w-10">
                       <Plus size={18} />
                     </Button>
                   </div>
-                  <div className="flex flex-wrap gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 mt-2 sm:mt-4">
                     {generalSettings.serviceTypes.map((service, idx) => (
-                      <div key={idx} className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-2 group">
+                      <div key={idx} className="bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-2 group">
                         {service}
                         <button onClick={() => removeService(service)} className="text-emerald-400 hover:text-emerald-800 transition-colors">
                           <X size={14} />
@@ -351,32 +351,32 @@ export default function Settings() {
           {/* User Management */}
           <TabsContent value="users" className="space-y-6">
             <Card className="border-slate-100 shadow-sm">
-              <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
-                <div className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
-                  <Users size={20} />
+              <CardHeader className="flex flex-row items-center gap-3 sm:gap-4 space-y-0 pb-2 p-4 sm:p-6">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center">
+                  <Users size={18} className="sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Admin Account</CardTitle>
-                  <CardDescription>Security and access settings</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Admin Account</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Security and access settings</CardDescription>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-4 pt-6">
+              <CardContent className="space-y-4 pt-2 sm:pt-6 p-4 sm:p-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="adminEmail">Email</Label>
-                    <Input id="adminEmail" type="email" value={adminProfile.email} disabled className="bg-slate-50" />
+                    <Label htmlFor="adminEmail" className="text-xs sm:text-sm">Email</Label>
+                    <Input id="adminEmail" type="email" value={adminProfile.email} disabled className="bg-slate-50 h-10 text-sm" />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="adminName">Admin Name</Label>
-                    <Input id="adminName" value={adminProfile.name} disabled className="bg-slate-50" />
+                    <Label htmlFor="adminName" className="text-xs sm:text-sm">Admin Name</Label>
+                    <Input id="adminName" value={adminProfile.name} disabled className="bg-slate-50 h-10 text-sm" />
                   </div>
                 </div>
                 <div className="pt-4 border-t border-slate-100 mt-4">
-                  <h4 className="text-sm font-medium text-slate-800 mb-4">Change Password</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Input type="password" placeholder="Current Password" />
-                    <Input type="password" placeholder="New Password" />
-                    <Input type="password" placeholder="Confirm Password" />
+                  <h4 className="text-xs sm:text-sm font-medium text-slate-800 mb-4">Change Password</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                    <Input type="password" placeholder="Current Password" className="h-10 text-sm" />
+                    <Input type="password" placeholder="New Password" className="h-10 text-sm" />
+                    <Input type="password" placeholder="Confirm Password" className="h-10 text-sm" />
                   </div>
                 </div>
               </CardContent>
@@ -386,25 +386,25 @@ export default function Settings() {
           {/* Notifications */}
           <TabsContent value="notifications" className="space-y-6">
             <Card className="border-slate-100 shadow-sm">
-              <CardHeader className="flex flex-row items-center gap-4 space-y-0 pb-2">
-                <div className="w-10 h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
-                  <Bell size={20} />
+              <CardHeader className="flex flex-row items-center gap-3 sm:gap-4 space-y-0 pb-2 p-4 sm:p-6">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center">
+                  <Bell size={18} className="sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Notification Preferences</CardTitle>
-                  <CardDescription>Manage system alerts and emails</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Notification Preferences</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Manage system alerts and emails</CardDescription>
                 </div>
               </CardHeader>
-              <CardContent className="space-y-6 pt-6">
+              <CardContent className="space-y-4 pt-2 sm:pt-6 p-4 sm:p-6">
                 {[
                   { id: 'email', label: 'Email Notifications', desc: 'Receive daily summaries via email', key: 'emailNotifications' },
-                  { id: 'sms', label: 'SMS Alerts', desc: 'Get urgent alerts on mobile (Costs apply)', key: 'smsNotifications' },
+                  { id: 'sms', label: 'SMS Alerts', desc: 'Get urgent alerts on mobile', key: 'smsNotifications' },
                   { id: 'push', label: 'Push Notifications', desc: 'Browser notifications for new orders', key: 'pushNotifications' },
                 ].map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 hover:bg-slate-50 rounded-lg transition-colors">
+                  <div key={item.id} className="flex items-center justify-between p-2 sm:p-3 hover:bg-slate-50 rounded-lg transition-colors">
                     <div className="space-y-0.5">
-                      <Label htmlFor={item.id} className="text-base">{item.label}</Label>
-                      <p className="text-sm text-slate-500">{item.desc}</p>
+                      <Label htmlFor={item.id} className="text-sm sm:text-base">{item.label}</Label>
+                      <p className="text-[10px] sm:text-xs text-slate-500">{item.desc}</p>
                     </div>
                     <Switch
                       id={item.id}

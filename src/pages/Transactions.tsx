@@ -260,21 +260,18 @@ export default function Transactions() {
                 <StatsCard
                     title="Total Transactions"
                     value={totalTransactions.toString()}
-                    icon={Receipt}
                     change="All time"
                     changeType="neutral"
                 />
                 <StatsCard
                     title="QR Code Volume"
                     value={qrTransactions.toString()}
-                    icon={Check}
                     change={`Total ${qrTransactions}`}
                     changeType="positive"
                 />
                 <StatsCard
                     title="Total Volume"
                     value={`₹${totalVolume.toLocaleString()}`}
-                    icon={Filter}
                     change="All methods"
                     changeType="neutral"
                 />
@@ -419,7 +416,7 @@ export default function Transactions() {
                         <div className="space-y-4 py-4">
 
                             {/* Actions Grid */}
-                            <div className="grid grid-cols-2 gap-3">
+                            {/* <div className="grid grid-cols-2 gap-3">
                                 <Button variant="outline" onClick={handleDownloadReceipt} disabled={isGenerating}>
                                     <Download className="h-4 w-4 mr-2" />
                                     {isGenerating ? 'Generating...' : 'Download PDF'}
@@ -428,16 +425,16 @@ export default function Transactions() {
                                     <Send className="h-4 w-4 mr-2" />
                                     Share WhatsApp
                                 </Button>
-                            </div>
+                            </div> */}
 
-                            <div className="flex gap-2">
+                            {/* <div className="flex gap-2">
                                 <Input
                                     placeholder="Enter email to share..."
                                     value={emailAddress}
                                     onChange={(e) => setEmailAddress(e.target.value)}
                                 />
                                 <Button onClick={handleSendEmail} disabled={isGenerating}>Send</Button>
-                            </div>
+                            </div> */}
 
                             {/* Existing Screenshot View */}
                             {selectedTransaction.receiptUrl && (
