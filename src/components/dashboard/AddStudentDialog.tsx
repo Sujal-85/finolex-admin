@@ -150,18 +150,18 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                     </Button>
                 </DialogTrigger>
             )}
-            <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[95vh] flex flex-col p-0 overflow-hidden">
+                <DialogHeader className="p-6 pb-2">
                     <DialogTitle>{studentToEdit ? "Edit Student" : "Add New Student"}</DialogTitle>
                     <DialogDescription>
                         {studentToEdit ? "Update the student's details here." : "Enter the student's details here."} Click save when you're done.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="name" className="text-right">
-                                Name
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4 custom-scrollbar">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2">
+                            <Label htmlFor="name" className="sm:text-right pt-2 sm:pt-0">
+                                Name *
                             </Label>
                             <Input
                                 id="name"
@@ -169,13 +169,13 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 placeholder="John Doe"
-                                className="col-span-3"
+                                className="sm:col-span-3"
                                 required
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="dob" className="text-right">
-                                Date of Birth
+                        <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2">
+                            <Label htmlFor="dob" className="sm:text-right pt-2 sm:pt-0">
+                                Date of Birth *
                             </Label>
                             <Input
                                 id="dob"
@@ -183,13 +183,13 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                                 type="date"
                                 value={dob}
                                 onChange={(e) => setDob(e.target.value)}
-                                className="col-span-3"
+                                className="sm:col-span-3"
                                 required
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="email" className="text-right">
-                                Email
+                        <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2">
+                            <Label htmlFor="email" className="sm:text-right pt-2 sm:pt-0">
+                                Email *
                             </Label>
                             <Input
                                 id="email"
@@ -198,12 +198,12 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                                 placeholder="john@college.edu"
-                                className="col-span-3"
+                                className="sm:col-span-3"
                                 required
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="phone" className="text-right">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 items-start sm:items-center gap-2">
+                            <Label htmlFor="phone" className="sm:text-right pt-2 sm:pt-0">
                                 Phone
                             </Label>
                             <Input
@@ -212,41 +212,35 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
                                 placeholder="+91 98765 43210"
-                                className="col-span-3"
+                                className="sm:col-span-3"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="room" className="text-right">
-                                Room
-                            </Label>
-                            <Input
-                                id="room"
-                                name="room"
-                                value={roomNo}
-                                onChange={(e) => setRoomNo(e.target.value)}
-                                placeholder="A-101"
-                                className="col-span-3"
-                            />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-2">
+                                <Label htmlFor="hostelName">Hostel</Label>
+                                <Input
+                                    id="hostelName"
+                                    name="hostelName"
+                                    value={hostelName}
+                                    onChange={(e) => setHostelName(e.target.value)}
+                                    placeholder="Boys Hostel 1"
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 gap-2">
+                                <Label htmlFor="room">Room</Label>
+                                <Input
+                                    id="room"
+                                    name="room"
+                                    value={roomNo}
+                                    onChange={(e) => setRoomNo(e.target.value)}
+                                    placeholder="A-101"
+                                />
+                            </div>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="hostelName" className="text-right">
-                                Hostel
-                            </Label>
-                            <Input
-                                id="hostelName"
-                                name="hostelName"
-                                value={hostelName}
-                                onChange={(e) => setHostelName(e.target.value)}
-                                placeholder="Boys Hostel 1"
-                                className="col-span-3"
-                            />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="plan" className="text-right">
-                                Plan
-                            </Label>
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="plan">Mess Plan</Label>
                             <Select value={plan} onValueChange={setPlan}>
-                                <SelectTrigger className="col-span-3">
+                                <SelectTrigger>
                                     <SelectValue placeholder="Select a plan" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -256,10 +250,8 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                                 </SelectContent>
                             </Select>
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="balance" className="text-right">
-                                Balance (₹)
-                            </Label>
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="balance">Initial Balance (₹)</Label>
                             <Input
                                 id="balance"
                                 name="balance"
@@ -267,25 +259,21 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                                 value={balance}
                                 onChange={(e) => setBalance(e.target.value)}
                                 placeholder="0"
-                                className="col-span-3"
                             />
                         </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="profilePicture" className="text-right">
-                                Profile URL
-                            </Label>
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="profileImage">Profile Image URL</Label>
                             <Input
                                 id="profileImage"
                                 name="profileImage"
                                 value={profileImage}
                                 onChange={(e) => setProfileImage(e.target.value)}
                                 placeholder="https://example.com/avatar.png"
-                                className="col-span-3"
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={isLoading}>
+                    <DialogFooter className="p-6 pt-2 border-t mt-auto">
+                        <Button type="submit" className="w-full sm:w-auto" disabled={isLoading}>
                             {isLoading ? "Saving..." : (studentToEdit ? "Update Student" : "Save Student")}
                         </Button>
                     </DialogFooter>

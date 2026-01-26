@@ -234,21 +234,18 @@ export default function Payments() {
         <StatsCard
           title="Total Collected"
           value={`₹${totalCollected.toLocaleString()}`}
-          icon={Check}
           change="+12% from last month"
           changeType="positive"
         />
         <StatsCard
           title="Pending Payments"
           value={`₹${totalPending.toLocaleString()}`}
-          icon={Filter}
           change="+5% from last month"
           changeType="negative"
         />
         <StatsCard
           title="Failed Payments"
           value={`₹${totalFailed.toLocaleString()}`}
-          icon={X}
           change="+8% from last month"
           changeType="negative"
         />

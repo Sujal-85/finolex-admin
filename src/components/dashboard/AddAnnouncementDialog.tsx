@@ -72,15 +72,15 @@ export function AddAnnouncementDialog({ open: controlledOpen, onOpenChange: setC
                     </Button>
                 </DialogTrigger>
             )}
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-[600px] w-[95vw] max-h-[95vh] flex flex-col p-0 overflow-hidden">
+                <DialogHeader className="p-6 pb-2">
                     <DialogTitle>Create New Announcement</DialogTitle>
                     <DialogDescription>
                         Create a new announcement for students.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="space-y-4 py-4">
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4 custom-scrollbar">
                         <div className="space-y-2">
                             <Label htmlFor="title">Title *</Label>
                             <Input
@@ -99,12 +99,12 @@ export function AddAnnouncementDialog({ open: controlledOpen, onOpenChange: setC
                                 value={formData.content}
                                 onChange={(e) => setFormData({ ...formData, content: e.target.value })}
                                 placeholder="Write your announcement here..."
-                                rows={4}
+                                rows={6}
                                 required
                             />
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label htmlFor="audience">Target Audience</Label>
                                 <Select
@@ -137,8 +137,8 @@ export function AddAnnouncementDialog({ open: controlledOpen, onOpenChange: setC
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t">
-                            <Label htmlFor="pushNotification">Send Push Notification</Label>
+                        <div className="flex items-center justify-between pt-2">
+                            <Label htmlFor="pushNotification" className="cursor-pointer">Send Push Notification</Label>
                             <Switch
                                 id="pushNotification"
                                 checked={formData.pushNotification}
@@ -148,8 +148,8 @@ export function AddAnnouncementDialog({ open: controlledOpen, onOpenChange: setC
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={isLoading}>
+                    <DialogFooter className="p-6 pt-2 border-t mt-auto">
+                        <Button type="submit" className="w-full sm:w-auto" disabled={isLoading}>
                             {isLoading ? "Processing..." : formData.scheduledDate ? "Schedule" : "Publish"}
                         </Button>
                     </DialogFooter>

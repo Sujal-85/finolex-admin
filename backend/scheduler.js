@@ -233,7 +233,7 @@ const initScheduler = (io) => {
             });
             if (io) io.emit('newNotification', notification);
             console.log('[Scheduler] Breakfast reminder sent.');
-            mockIo.emit('newNotification', { title: 'Breakfast is Ready! 🍳', message: '...' });
+
         } catch (err) {
             console.error('[Scheduler] Breakfast Reminder Error:', err);
         }
@@ -252,7 +252,7 @@ const initScheduler = (io) => {
             });
             if (io) io.emit('newNotification', notification);
             console.log('[Scheduler] Lunch reminder sent.');
-            mockIo.emit('newNotification', { title: 'Lunch Time! 🍛', message: '...' });
+
         } catch (err) {
             console.error('[Scheduler] Lunch Reminder Error:', err);
         }
@@ -271,7 +271,7 @@ const initScheduler = (io) => {
             });
             if (io) io.emit('newNotification', notification);
             console.log('[Scheduler] Dinner reminder sent.');
-            mockIo.emit('newNotification', { title: 'Dinner Served! 🍽️', message: '...' })6;
+
         } catch (err) {
             console.error('[Scheduler] Dinner Reminder Error:', err);
         }

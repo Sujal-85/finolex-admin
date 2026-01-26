@@ -26,8 +26,16 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
         const user = await User.findOne({ email });
-        if (!user || !(await user.comparePassword(password))) {
-            return res.status(401).send({ error: 'Invalid login credentials' });
+        // DEBUGGING: Detailed login errors
+        if (!user) {
+            console.log(`Login failed: User ${email} not found`);
+            return res.status(401).send({ error: 'Invalid login credentials (User not found)' });
+        }
+
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            console.log(`Login failed: Password mismatch for ${email}`);
+            return res.status(401).send({ error: 'Invalid login credentials (Password mismatch)' });
         }
         const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '14d' });
 
@@ -41,7 +49,8 @@ router.post('/login', async (req, res) => {
 
         res.send({ user, token });
     } catch (error) {
-        res.status(400).send(error);
+        console.error("Login Route Exception:", error);
+        res.status(400).send({ error: `Server Exception: ${error.message}` });
     }
 });
 

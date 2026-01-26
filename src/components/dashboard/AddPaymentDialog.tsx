@@ -136,21 +136,19 @@ export function AddPaymentDialog({ open: controlledOpen, onOpenChange: setContro
                     </Button>
                 </DialogTrigger>
             )}
-            <DialogContent className="sm:max-w-[500px]">
-                <DialogHeader>
+            <DialogContent className="sm:max-w-[500px] w-[95vw] max-h-[95vh] flex flex-col p-0 overflow-hidden">
+                <DialogHeader className="p-6 pb-2">
                     <DialogTitle>Record Payment</DialogTitle>
                     <DialogDescription>
                         Record a new payment transaction for a student.
                     </DialogDescription>
                 </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="student" className="text-right">
-                                Student
-                            </Label>
+                <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+                    <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4 custom-scrollbar">
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="student">Student *</Label>
                             <Select value={studentId} onValueChange={setStudentId}>
-                                <SelectTrigger className="col-span-3">
+                                <SelectTrigger>
                                     <SelectValue placeholder="Select student" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -163,101 +161,91 @@ export function AddPaymentDialog({ open: controlledOpen, onOpenChange: setContro
                             </Select>
                         </div>
 
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="amount" className="text-right">
-                                Amount
-                            </Label>
-                            <div className="col-span-3 relative">
-                                <span className="absolute left-3 top-2.5 text-muted-foreground">₹</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-2">
+                                <Label htmlFor="amount">Amount (₹) *</Label>
+                                <div className="relative">
+                                    <span className="absolute left-3 top-2.5 text-muted-foreground">₹</span>
+                                    <Input
+                                        id="amount"
+                                        type="number"
+                                        value={amount}
+                                        onChange={(e) => setAmount(e.target.value)}
+                                        placeholder="0.00"
+                                        className="pl-7"
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-2">
+                                <Label htmlFor="date">Date *</Label>
                                 <Input
-                                    id="amount"
-                                    type="number"
-                                    value={amount}
-                                    onChange={(e) => setAmount(e.target.value)}
-                                    placeholder="0.00"
-                                    className="pl-7"
+                                    id="date"
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
                                     required
                                 />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="type" className="text-right">
-                                Payment Type
-                            </Label>
-                            <Select value={type} onValueChange={setType}>
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select type" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Meal Plan">Meal Plan</SelectItem>
-                                    <SelectItem value="Top-up">Top-up</SelectItem>
-                                    <SelectItem value="Fine">Fine</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 gap-2">
+                                <Label htmlFor="type">Payment Type *</Label>
+                                <Select value={type} onValueChange={setType}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Meal Plan">Meal Plan</SelectItem>
+                                        <SelectItem value="Top-up">Top-up</SelectItem>
+                                        <SelectItem value="Fine">Fine</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="method" className="text-right">
-                                Method
-                            </Label>
-                            <Select value={method} onValueChange={setMethod}>
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Select method" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Cash">Cash</SelectItem>
-                                    <SelectItem value="UPI">UPI</SelectItem>
-                                    <SelectItem value="Card">Card</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div className="grid grid-cols-1 gap-2">
+                                <Label htmlFor="method">Method *</Label>
+                                <Select value={method} onValueChange={setMethod}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select method" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="Cash">Cash</SelectItem>
+                                        <SelectItem value="UPI">UPI</SelectItem>
+                                        <SelectItem value="Card">Card</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         {method !== 'Cash' && (
-                            <div className="grid grid-cols-4 items-center gap-4">
-                                <Label htmlFor="transactionId" className="text-right">
-                                    Transaction ID
-                                </Label>
+                            <div className="grid grid-cols-1 gap-2">
+                                <Label htmlFor="transactionId">Transaction ID *</Label>
                                 <Input
                                     id="transactionId"
                                     value={transactionId}
                                     onChange={(e) => setTransactionId(e.target.value)}
                                     placeholder="Enter transaction ID"
-                                    className="col-span-3"
                                     required={method !== 'Cash'}
                                 />
                             </div>
                         )}
 
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="date" className="text-right">
-                                Date
-                            </Label>
-                            <Input
-                                id="date"
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="col-span-3"
-                                required
-                            />
-                        </div>
-
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="remarks" className="text-right">
-                                Remarks
-                            </Label>
+                        <div className="grid grid-cols-1 gap-2 pb-2">
+                            <Label htmlFor="remarks">Remarks</Label>
                             <Textarea
                                 id="remarks"
                                 value={remarks}
                                 onChange={(e) => setRemarks(e.target.value)}
                                 placeholder="Optional remarks..."
-                                className="col-span-3"
+                                rows={3}
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button type="submit" disabled={isLoading}>
+                    <DialogFooter className="p-6 pt-2 border-t mt-auto">
+                        <Button type="submit" className="w-full sm:w-auto" disabled={isLoading}>
                             {isLoading ? "Recording..." : "Record Payment"}
                         </Button>
                     </DialogFooter>

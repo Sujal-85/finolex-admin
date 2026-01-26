@@ -3,13 +3,14 @@ import * as htmlToImage from 'html-to-image';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, TrendingUp, Users, DollarSign, AlertCircle, Loader2 } from "lucide-react";
+import { Download, TrendingUp, Users, DollarSign, AlertCircle, Loader2, FileText, Calendar, BarChart3, PieChart as PieChartIcon, Filter, RefreshCcw } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import api from "@/api/client";
 import { Loader } from "@/components/ui/loader";
 import { generatePDFReport, generateMultiSectionReport, ReportSection } from "@/utils/pdfGenerator";
+import { generateDOCXReport, generateMultiSectionDOCXReport } from "@/utils/docxGenerator";
 import { generateBusinessInsights } from "@/utils/analyticsEngine";
 
 export default function Reports() {
@@ -28,6 +29,7 @@ export default function Reports() {
     pendingComplaints: 0,
     avgPlanValue: 0
   });
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -57,10 +59,11 @@ export default function Reports() {
 
 
 
-  const handleExport = async (type: string) => {
+  const handleExport = async (type: string, format: 'PDF' | 'DOCX' = 'PDF') => {
+    setIsExporting(true);
     toast({
       title: "Export Started",
-      description: `Generating ${type} report...`,
+      description: `Generating ${type} report as ${format}...`,
     });
 
     try {
@@ -126,94 +129,156 @@ export default function Reports() {
           reportTitle = "Menu Items Report";
           break;
 
-        case "Full Analytics":
-          // Generate Business Insights
+        case "Full Analytics": {
           const insights = generateBusinessInsights(analyticsData, summaryStats);
 
-          // Helper to capture chart
           const captureChart = async (elementId: string) => {
             const element = document.getElementById(elementId);
-            if (element) {
-              try {
-                // Use html-to-image for better support of modern CSS (variables, oklch etc)
-                const dataUrl = await htmlToImage.toPng(element, { backgroundColor: '#ffffff' });
-                return dataUrl;
-              } catch (error) {
-                console.error(`Failed to capture chart ${elementId}:`, error);
-                return null;
-              }
+            if (!element) return null;
+
+            try {
+              return await htmlToImage.toPng(element, {
+                backgroundColor: "#ffffff",
+                pixelRatio: 2, // sharper charts
+              });
+            } catch (err) {
+              console.error("Chart capture failed:", err);
+              return null;
             }
-            return null;
           };
 
-          // Delay slightly to ensure rendering if needed, but normally await is enough
           const revenueImg = await captureChart("revenue-chart");
           const planImg = await captureChart("plan-chart");
           const complaintImg = await captureChart("complaint-chart");
           const enrollmentImg = await captureChart("enrollment-chart");
 
           const reportSections: ReportSection[] = [
+
+            // =============================
+            // EXECUTIVE SUMMARY
+            // =============================
             {
-              type: 'text',
-              title: 'Executive Summary',
+              type: "text" as const,
+              title: "Executive Summary",
               content: [
-                `This comprehensive analytics report provides an overview of the canteen's performance for the selected period.`,
-                `Total Revenue: Rs. ${summaryStats.totalRevenue.toLocaleString()}`,
-                `Active Students: ${summaryStats.activeStudents}`,
-                `Pending Complaints: ${summaryStats.pendingComplaints}`
-              ]
+                "This report presents a high-level overview of canteen performance, student engagement, and operational health.",
+              ],
             },
+
+            // =============================
+            // KPI CARDS (BIG WIN 🔥)
+            // =============================
             {
-              type: 'text',
-              title: 'AI Business Recommendations',
-              content: insights
+              type: "stats" as const,
+              title: "Key Performance Indicators",
+              stats: [
+                { label: "Total Revenue", value: `₹ ${summaryStats.totalRevenue.toLocaleString()}` },
+                { label: "Active Students", value: summaryStats.activeStudents },
+                { label: "Pending Complaints", value: summaryStats.pendingComplaints },
+              ],
             },
+
+            // =============================
+            // REVENUE SECTION
+            // =============================
             {
-              type: 'table',
-              title: 'Revenue Trends Data',
+              type: "section" as const,
+              title: "Revenue Analysis",
+              description: "Monthly revenue performance and trend analysis.",
+            },
+
+            ...(revenueImg
+              ? [{ type: "image" as const, content: revenueImg, width: 220, height: 130 }]
+              : []),
+
+            {
+              type: "table" as const,
+              title: "Revenue Trends",
               columns: ["Month", "Revenue"],
-              data: analyticsData.revenueData.map((d: any) => [d.month, `Rs. ${d.revenue}`])
-            }
+              data: analyticsData.revenueData.map((d: any) => [
+                d.month,
+                `₹ ${d.revenue.toLocaleString()}`,
+              ]),
+            },
+
+            // =============================
+            // PLAN DISTRIBUTION
+            // =============================
+            {
+              type: "section" as const,
+              title: "Subscription Plan Distribution",
+              description: "Active users grouped by subscription plans.",
+            },
+
+            ...(planImg
+              ? [{ type: "image" as const, content: planImg, width: 220, height: 130 }]
+              : []),
+
+            {
+              type: "table" as const,
+              columns: ["Plan Name", "Active Users"],
+              data: analyticsData.planDistribution.map((d: any) => [d.name, d.value]),
+            },
+
+            // =============================
+            // COMPLAINTS
+            // =============================
+            {
+              type: "section",
+              title: "Complaint Analytics",
+              description: "Recent complaint categories and volume.",
+            },
+
+            ...(complaintImg
+              ? [{ type: "image" as const, content: complaintImg, width: 220, height: 130 }]
+              : []),
+
+            {
+              type: "table" as const,
+              columns: ["Category", "Count"],
+              data: analyticsData.complaintCategories.map((d: any) => [
+                d.category,
+                d.count,
+              ]),
+            },
+
+            // =============================
+            // ENROLLMENT
+            // =============================
+            {
+              type: "section" as const,
+              title: "Student Enrollment Trends",
+              description: "Monthly student enrollment growth.",
+            },
+
+            ...(enrollmentImg
+              ? [{ type: "image" as const, content: enrollmentImg, width: 220, height: 130 }]
+              : []),
+
+            // =============================
+            // AI INSIGHTS
+            // =============================
+            {
+              type: "text" as const,
+              title: "AI-Driven Business Recommendations",
+              content: insights,
+            },
           ];
 
-          if (revenueImg) {
-            reportSections.splice(2, 0, { type: 'image', content: revenueImg, width: 180, height: 100 });
+          if (format === 'PDF') {
+            await generateMultiSectionReport("Full Analytics & Business Insights", reportSections, fileName);
+          } else {
+            await generateMultiSectionDOCXReport("Full Analytics & Business Insights", reportSections, fileName);
           }
-
-          reportSections.push({
-            type: 'table',
-            title: 'Plan Distribution Data',
-            columns: ["Plan Name", "Active Users"],
-            data: analyticsData.planDistribution.map((d: any) => [d.name, d.value])
-          });
-
-          if (planImg) {
-            reportSections.push({ type: 'image', content: planImg, width: 180, height: 100 });
-          }
-
-          reportSections.push({
-            type: 'table',
-            title: 'Recent Complaints Breakdown',
-            columns: ["Category", "Count"],
-            data: analyticsData.complaintCategories.map((d: any) => [d.category, d.count])
-          });
-
-          if (complaintImg) {
-            reportSections.push({ type: 'image', content: complaintImg, width: 180, height: 100 });
-          }
-
-          if (enrollmentImg) {
-            reportSections.push({ type: 'image', title: 'Enrollment Trends', content: enrollmentImg, width: 180, height: 100 });
-          }
-
-          await generateMultiSectionReport("Full Analytics & Business Insights", reportSections, fileName);
 
           toast({
             title: "Export Complete",
-            description: `Full Analytics report generated successfully.`,
-            duration: 2000,
+            description: "Professional analytics report generated successfully.",
+            duration: 2500,
           });
-          return; // Exit early as we use custom generator
+
+          return;
+        }
 
         case "Revenue":
           columns = ["Month", "Revenue"];
@@ -256,7 +321,11 @@ export default function Reports() {
           return;
       }
 
-      await generatePDFReport(reportTitle, columns, data, fileName);
+      if (format === 'PDF') {
+        await generatePDFReport(reportTitle, columns, data, fileName);
+      } else {
+        await generateDOCXReport(reportTitle, columns, data, fileName);
+      }
 
       toast({
         title: "Export Complete",
@@ -271,6 +340,8 @@ export default function Reports() {
         description: "Could not fetch data for report generation.",
         variant: "destructive",
       });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -281,7 +352,20 @@ export default function Reports() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 relative">
+      {isExporting && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/20 backdrop-blur-sm">
+          <div className="bg-white p-8 rounded-2xl shadow-2xl flex flex-col items-center gap-4">
+            <div className="relative flex h-20 w-20 items-center justify-center rounded-full bg-blue-50 shadow-inner ring-1 ring-blue-100">
+              <Loader2 className="h-10 w-10 animate-spin text-blue-600" />
+            </div>
+            <div className="space-y-1 text-center">
+              <p className="text-xl font-bold text-gray-800">Processing Report</p>
+              <p className="text-sm text-gray-500 animate-pulse">Building your PDF, please wait...</p>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Reports & Analytics</h1>
@@ -327,9 +411,9 @@ export default function Reports() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/10 rounded-lg">
-                <DollarSign className="h-6 w-6 text-primary" />
-              </div>
+              {/* <div className="p-3 bg-primary/10 rounded-lg">
+                <DollarSign className="h-6 w-6 text-primary" /> 
+              </div> */}
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
                 <p className="text-2xl font-bold">₹{summaryStats.totalRevenue.toLocaleString()}</p>
@@ -342,9 +426,9 @@ export default function Reports() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-success/10 rounded-lg">
+              {/* <div className="p-3 bg-success/10 rounded-lg">
                 <Users className="h-6 w-6 text-success" />
-              </div>
+              </div> */}
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Active Students</p>
                 <p className="text-2xl font-bold">{summaryStats.activeStudents}</p>
@@ -357,9 +441,9 @@ export default function Reports() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-warning/10 rounded-lg">
+              {/* <div className="p-3 bg-warning/10 rounded-lg">
                 <TrendingUp className="h-6 w-6 text-warning" />
-              </div>
+              </div> */}
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Avg Plan Value</p>
                 <p className="text-2xl font-bold">₹{summaryStats.avgPlanValue?.toLocaleString() || 0}</p>
@@ -372,9 +456,9 @@ export default function Reports() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <div className="p-3 bg-destructive/10 rounded-lg">
+              {/* <div className="p-3 bg-destructive/10 rounded-lg">
                 <AlertCircle className="h-6 w-6 text-destructive" />
-              </div>
+              </div> */}
               <div className="space-y-1">
                 <p className="text-sm font-medium text-muted-foreground">Open Complaints</p>
                 <p className="text-2xl font-bold">{summaryStats.pendingComplaints}</p>
@@ -516,31 +600,61 @@ export default function Reports() {
           <CardDescription>Download predefined reports</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 grid-cols-2 lg:grid-cols-3">
-            <Button variant="outline" className="justify-start" onClick={() => handleExport("Payment Summary")}>
-              <Download className="h-4 w-4 mr-2" />
-              Payment Summary (PDF)
-            </Button>
-            <Button variant="outline" className="justify-start" onClick={() => handleExport("Student Enrollment")}>
-              <Download className="h-4 w-4 mr-2" />
-              Student Enrollment (PDF)
-            </Button>
-            <Button variant="outline" className="justify-start" onClick={() => handleExport("Complaint Report")}>
-              <Download className="h-4 w-4 mr-2" />
-              Complaint Report (PDF)
-            </Button>
-            <Button variant="outline" className="justify-start" onClick={() => handleExport("Menu History")}>
-              <Download className="h-4 w-4 mr-2" />
-              Menu History (PDF)
-            </Button>
-            <Button variant="outline" className="justify-start" onClick={() => handleExport("Revenue Report")}>
-              <Download className="h-4 w-4 mr-2" />
-              Revenue Report (PDF)
-            </Button>
-            <Button variant="outline" className="justify-start" onClick={() => handleExport("Full Analytics")}>
-              <Download className="h-4 w-4 mr-2" />
-              Full Analytics (PDF)
-            </Button>
+          <div className="grid gap-3 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 justify-start" onClick={() => handleExport("Payment Summary", "PDF")}>
+                <Download className="h-4 w-4 mr-2" />
+                Payments (PDF)
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => handleExport("Payment Summary", "DOCX")}>
+                <FileText className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 justify-start" onClick={() => handleExport("Student Enrollment", "PDF")}>
+                <Download className="h-4 w-4 mr-2" />
+                Students (PDF)
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => handleExport("Student Enrollment", "DOCX")}>
+                <FileText className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 justify-start" onClick={() => handleExport("Complaint Report", "PDF")}>
+                <Download className="h-4 w-4 mr-2" />
+                Complaints (PDF)
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => handleExport("Complaint Report", "DOCX")}>
+                <FileText className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 justify-start" onClick={() => handleExport("Menu History", "PDF")}>
+                <Download className="h-4 w-4 mr-2" />
+                Menu (PDF)
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => handleExport("Menu History", "DOCX")}>
+                <FileText className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 justify-start" onClick={() => handleExport("Revenue Report", "PDF")}>
+                <Download className="h-4 w-4 mr-2" />
+                Revenue (PDF)
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => handleExport("Revenue Report", "DOCX")}>
+                <FileText className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="flex-1 justify-start" onClick={() => handleExport("Full Analytics", "PDF")}>
+                <Download className="h-4 w-4 mr-2" />
+                Analytics (PDF)
+              </Button>
+              <Button variant="outline" size="icon" onClick={() => handleExport("Full Analytics", "DOCX")}>
+                <FileText className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

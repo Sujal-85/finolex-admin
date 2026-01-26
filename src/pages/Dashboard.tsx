@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Users, IndianRupee, AlertCircle, MessageSquare, Utensils, FileText } from "lucide-react";
+import { Users, IndianRupee, AlertCircle, MessageSquare, Utensils, FileText, ShoppingCart } from "lucide-react";
 import { StatsCard } from "@/components/shared/StatsCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,7 +35,8 @@ export default function Dashboard() {
     activeStudents: 0,
     totalRevenue: 0,
     pendingComplaints: 0,
-    lowStockItems: 0
+    lowStockItems: 0,
+    totalOrders: 0
   });
   const [analytics, setAnalytics] = useState({
     revenueData: [],
@@ -54,14 +55,18 @@ export default function Dashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [statsRes, paymentsRes, complaintsRes, analyticsRes] = await Promise.all([
+      const [statsRes, paymentsRes, complaintsRes, analyticsRes, ordersRes] = await Promise.all([
         api.get('/stats'),
         api.get('/payments'),
         api.get('/complaints'),
-        api.get('/stats/analytics')
+        api.get('/stats/analytics'),
+        api.get('/orders')
       ]);
 
-      setStats(statsRes.data);
+      setStats({
+        ...statsRes.data,
+        totalOrders: ordersRes.data.length
+      });
       setRecentTransactions(paymentsRes.data.slice(0, 5));
       setRecentComplaints(complaintsRes.data.slice(0, 3));
       setAnalytics(analyticsRes.data);
@@ -102,43 +107,33 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           title="Total Students"
           value={stats.totalStudents.toLocaleString()}
           change={`${stats.activeStudents} active`}
           changeType="positive"
-          icon={Users}
-          iconBgColor="bg-primary-light"
-          iconColor="text-primary"
-        />
-        <StatsCard
-          title="Total Revenue"
-          value={`₹${stats.totalRevenue.toLocaleString()}`}
-          change="Lifetime"
-          changeType="positive"
-          icon={IndianRupee}
-          iconBgColor="bg-success-light"
-          iconColor="text-success"
-        />
-        <StatsCard
-          title="Low Stock Items"
-          value={stats.lowStockItems.toString()}
-          change="Needs attention"
-          changeType="negative"
-          icon={AlertCircle}
-          iconBgColor="bg-warning-light"
-          iconColor="text-warning"
         />
         <StatsCard
           title="Pending Complaints"
           value={stats.pendingComplaints.toString()}
           change="Requires action"
           changeType="negative"
-          icon={MessageSquare}
-          iconBgColor="bg-danger-light"
-          iconColor="text-danger"
         />
+        <StatsCard
+          title="Total Orders"
+          value={stats.totalOrders.toString()}
+          change="Current session"
+          changeType="positive"
+        />
+        <StatsCard
+          title="Total Revenue"
+          value={`₹${stats.totalRevenue.toLocaleString()}`}
+          change="Lifetime"
+          changeType="positive"
+          className={stats.totalRevenue >= 10000 ? "sm:col-span-2" : ""}
+        />
+
       </div>
 
       <div className="grid gap-4 grid-cols-1 lg:grid-cols-7">

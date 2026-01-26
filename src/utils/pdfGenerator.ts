@@ -4,7 +4,9 @@ import autoTable from "jspdf-autotable";
 export type ReportSection =
     | { type: 'text'; title?: string; content: string[] }
     | { type: 'table'; title?: string; columns: string[]; data: any[][] }
-    | { type: 'image'; title?: string; content: string; width?: number; height?: number };
+    | { type: 'image'; title?: string; content: string; width?: number; height?: number }
+    | { type: 'stats'; title?: string; stats: { label: string; value: string | number }[] }
+    | { type: 'section'; title?: string; description?: string };
 
 export const generateMultiSectionReport = async (
     reportTitle: string,
@@ -143,6 +145,27 @@ export const generateMultiSectionReport = async (
 
             // Update Y after table
             currentY = (doc as any).lastAutoTable.finalY + 15;
+        }
+        else if (section.type === 'stats') {
+            doc.setFontSize(10);
+            doc.setTextColor(80);
+            doc.setFont("helvetica", "normal");
+
+            for (const stat of section.stats) {
+                doc.text(`${stat.label}: ${stat.value}`, 20, currentY);
+                currentY += 6;
+            }
+            currentY += 10;
+        }
+        else if (section.type === 'section') {
+            if (section.description) {
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.setFont("helvetica", "italic");
+                const splitDesc = doc.splitTextToSize(section.description, pageWidth - 28);
+                doc.text(splitDesc, 14, currentY);
+                currentY += (splitDesc.length * 5) + 8;
+            }
         }
     }
 
