@@ -68,10 +68,11 @@ export default function Profile() {
 
             try {
                 // Determine API base URL (handling localhost vs relative)
-                // Using api/client if available or direct fetch with token
+                const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+                const uploadURL = `${baseURL}/upload/avatar`;
                 const token = localStorage.getItem('token');
 
-                const response = await fetch('http://localhost:5000/api/upload/avatar', {
+                const response = await fetch(uploadURL, {
                     method: 'POST',
                     body: formData,
                     headers: {

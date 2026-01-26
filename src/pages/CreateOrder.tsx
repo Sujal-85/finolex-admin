@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/client';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeft, Save, Calendar, Users, DollarSign, MapPin } from 'lucide-react';
 
@@ -61,7 +61,7 @@ const CreateOrder = () => {
                 headers: { Authorization: `Bearer ${token}` }
             };
 
-            await axios.post('http://localhost:5000/api/orders', formData, config);
+            await api.post('/orders', formData, config);
             navigate('/admin/orders');
         } catch (error) {
             console.error("Error creating order", error);

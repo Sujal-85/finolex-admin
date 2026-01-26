@@ -43,8 +43,8 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
         }
 
         // Connect to the backend URL
-        // Assuming backend is on localhost:5000 or same host as api
-        const socketInstance = io("https://finolex-admin.onrender.com");
+        const socketURL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : "http://localhost:5000";
+        const socketInstance = io(socketURL);
 
         socketInstance.on("connect", () => {
             console.log("Socket connected:", socketInstance.id);

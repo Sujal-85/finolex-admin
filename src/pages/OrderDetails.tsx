@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../api/client';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, MapPin, Users, DollarSign, Ticket, Printer } from 'lucide-react';
 import { jsPDF } from "jspdf";
@@ -21,7 +21,7 @@ const OrderDetails = () => {
     const fetchOrderDetails = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`http://localhost:5000/api/orders/${id}`, {
+            const response = await api.get(`/orders/${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setOrder(response.data);
@@ -35,7 +35,7 @@ const OrderDetails = () => {
     const fetchCoupons = async () => {
         try {
             const token = localStorage.getItem('token');
-            const response = await axios.get(`http://localhost:5000/api/coupons?orderId=${id}`, {
+            const response = await api.get(`/coupons?orderId=${id}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setCoupons(response.data);
@@ -48,7 +48,7 @@ const OrderDetails = () => {
         setGenerating(true);
         try {
             const token = localStorage.getItem('token');
-            await axios.post(`http://localhost:5000/api/orders/${id}/coupons`, {
+            await api.post(`/orders/${id}/coupons`, {
                 numberOfCoupons: couponCount,
                 valuePerCoupon: order.costPerHead
             }, {
