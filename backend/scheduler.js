@@ -6,6 +6,9 @@ const Plan = require('./models/Plan');
 
 const initScheduler = (io) => {
     console.log('Scheduler Initialized');
+    console.log(`[Scheduler] Server Date/Time: ${new Date().toString()}`);
+    console.log(`[Scheduler] Timezone Check: ${Intl.DateTimeFormat().resolvedOptions().timeZone}`);
+
 
     // Run every minute (Announcements)
     cron.schedule('* * * * *', async () => {
@@ -145,6 +148,14 @@ const initScheduler = (io) => {
                             type: 'payment',
                             recipient: student._id
                         });
+
+                        if (io) io.emit('newNotification', {
+                            title: 'Late Fee Applied',
+                            message: 'A late fee of ₹5 has been added to your outstanding balance.',
+                            type: 'payment',
+                            recipient: student._id,
+                            createdAt: new Date()
+                        });
                     }
                 }
             }
@@ -175,6 +186,14 @@ const initScheduler = (io) => {
                     message: `Urgent: You have an outstanding balance of ₹${student.balance} causing daily fines. Please pay immediately.`,
                     type: 'payment',
                     recipient: student._id
+                });
+
+                if (io) io.emit('newNotification', {
+                    title: 'Overdue Payment Reminder',
+                    message: `Urgent: You have an outstanding balance of ₹${student.balance} causing daily fines. Please pay immediately.`,
+                    type: 'payment',
+                    recipient: student._id,
+                    createdAt: new Date()
                 });
                 reminderCount++;
             }

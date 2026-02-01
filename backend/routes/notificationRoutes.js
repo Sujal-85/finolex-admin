@@ -7,7 +7,6 @@ const router = express.Router();
 router.get('/', auth, async (req, res) => {
     try {
         console.log('Fetching notifications...');
-        console.log('Fetching notifications...');
         // Filter: Global notifications (recipient: null) OR Targeted to current user
         const notifications = await Notification.find({
             $or: [

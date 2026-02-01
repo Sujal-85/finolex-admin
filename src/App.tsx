@@ -25,6 +25,8 @@ import SettingsPage from "./pages/Settings";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { ChatAssistant } from "./components/ChatAssistant";
+import AttendanceEntry from "./pages/AttendanceEntry";
+import AttendanceStatus from "./pages/AttendanceStatus";
 import AdminOrders from "./pages/AdminOrders";
 import CreateOrder from "./pages/CreateOrder";
 import OrderDetails from "./pages/OrderDetails";
@@ -76,6 +78,8 @@ const App = () => {
                 <Route path="/activity" element={<ActivityLog />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/profile" element={<Profile />} />
+                <Route path="/attendance/entry" element={<AttendanceEntry />} />
+                <Route path="/attendance/status" element={<AttendanceStatus />} />
                 <Route path="/admin/orders" element={<AdminOrders />} />
                 <Route path="/admin/create-order" element={<CreateOrder />} />
                 <Route path="/admin/orders/:id" element={<OrderDetails />} />
