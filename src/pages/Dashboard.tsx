@@ -101,7 +101,7 @@ export default function Dashboard() {
           <Button onClick={() => navigate("/menu")} variant="outline" className="gap-2 shadow-sm">
             <Utensils className="h-4 w-4" /> Update Menu
           </Button>
-          <Button onClick={() => navigate("/reports")} variant="ghost" className="gap-2">
+          <Button onClick={() => navigate("/reports")} variant="outline" className="gap-2">
             <FileText className="h-4 w-4" /> View Reports
           </Button>
         </div>

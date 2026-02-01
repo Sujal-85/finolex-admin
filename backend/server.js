@@ -17,6 +17,7 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const planRoutes = require('./routes/planRoutes');
 const feedbackRoutes = require('./routes/feedbackRoutes');
 const transactionRoutes = require('./routes/transactionRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
 
 const app = express();
 const http = require('http');
@@ -58,6 +59,7 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/transactions', transactionRoutes);
+app.use('/api/attendance', attendanceRoutes);
 app.use('/api/orders', require('./routes/orderRoutes'));
 app.use('/api/coupons', require('./routes/couponRoutes'));
 
