@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import api from "@/api/client";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, CheckCircle, Search, Users, Utensils, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -59,12 +60,8 @@ const AttendanceEntry = () => {
     const fetchStudents = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem("token");
-            const res = await fetch("http://localhost:5000/api/students", {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-            if (!res.ok) throw new Error("Failed to fetch students");
-            const data = await res.json();
+            const res = await api.get("/students");
+            const data = res.data;
             const activeStudents = data.filter((s: Student) => s.status === 'Active');
             setStudents(activeStudents);
 
@@ -87,15 +84,12 @@ const AttendanceEntry = () => {
 
     const checkExistingAttendance = async () => {
         try {
-            const token = localStorage.getItem("token");
             const dateStr = format(date, 'yyyy-MM-dd');
             // Fetch ALL meals for the date, unpopulated (raw IDs) for robust matching
-            const res = await fetch(`http://localhost:5000/api/attendance?date=${dateStr}&meal=all&populate=false`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
+            const res = await api.get(`/attendance?date=${dateStr}&meal=all&populate=false`);
 
-            if (res.ok) {
-                const data = await res.json(); // Returns flattened records array
+            if (res.status === 200) {
+                const data = res.data; // Returns flattened records array
 
                 const newAttendance: AttendanceState = {};
                 // Reset all to false first
@@ -155,7 +149,6 @@ const AttendanceEntry = () => {
     const handleSubmit = async () => {
         try {
             setSubmitting(true);
-            const token = localStorage.getItem("token");
 
             // Construct unified payload
             // Map: { studentId, breakfast: 'status', lunch: 'status', dinner: 'status' }
@@ -171,22 +164,11 @@ const AttendanceEntry = () => {
             // Actually, syncing "absent" is important if they were previously present.
             // Sending all students in `attendance` state is safe.
 
-            const response = await fetch("http://localhost:5000/api/attendance/bulk", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({
-                    date: format(date, 'yyyy-MM-dd'),
-                    // No 'meal' param needed anymore, implicit in data objects
-                    attendanceData,
-                }),
+            await api.post("/attendance/bulk", {
+                date: format(date, 'yyyy-MM-dd'),
+                // No 'meal' param needed anymore, implicit in data objects
+                attendanceData,
             });
-
-            if (!response.ok) {
-                throw new Error("Failed to submit");
-            }
 
             toast({
                 title: "Success",
