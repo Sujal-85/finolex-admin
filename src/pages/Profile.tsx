@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import api from "@/api/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -67,25 +68,14 @@ export default function Profile() {
             const toastId = toast.loading("Uploading avatar...");
 
             try {
-                // Determine API base URL (handling localhost vs relative)
-                const baseURL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
-                const uploadURL = `${baseURL}/upload/avatar`;
-                const token = localStorage.getItem('token');
-
-                const response = await fetch(uploadURL, {
-                    method: 'POST',
-                    body: formData,
+                // Use api client which handles baseURL and auth
+                const response = await api.post('/upload/avatar', formData, {
                     headers: {
-                        'Authorization': `Bearer ${token}`
-                        // Content-Type is auto-set by browser for FormData
+                        'Content-Type': 'multipart/form-data',
                     }
                 });
 
-                if (!response.ok) {
-                    throw new Error("Upload failed");
-                }
-
-                const data = await response.json();
+                const data = response.data;
 
                 // Update state
                 setAvatarUrl(data.avatar);

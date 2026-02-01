@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import api from "@/api/client";
 import { format } from "date-fns";
 import { CalendarIcon, Loader2, CheckCircle, Clock, FileText, Download, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -86,21 +87,14 @@ const AttendanceStatus = () => {
     const fetchAttendance = async () => {
         try {
             setLoading(true);
-            const token = localStorage.getItem("token");
 
-            let queryParams = new URLSearchParams();
-            if (date) queryParams.append("date", format(date, 'yyyy-MM-dd'));
-            if (meal !== "all") queryParams.append("meal", meal);
-            if (statusFilter !== "all") queryParams.append("status", statusFilter);
+            const params: any = {};
+            if (date) params.date = format(date, 'yyyy-MM-dd');
+            if (meal !== "all") params.meal = meal;
+            if (statusFilter !== "all") params.status = statusFilter;
 
-            const res = await fetch(`http://localhost:5000/api/attendance?${queryParams.toString()}`, {
-                headers: { Authorization: `Bearer ${token}` },
-            });
-
-            if (!res.ok) throw new Error("Failed to fetch attendance records");
-
-            const data = await res.json();
-            setRecords(data);
+            const res = await api.get('/attendance', { params });
+            setRecords(res.data);
         } catch (error) {
             toast({
                 title: "Error",
@@ -114,17 +108,10 @@ const AttendanceStatus = () => {
 
     const handleVerify = async (id: string, meal: string) => {
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`http://localhost:5000/api/attendance/${id}`, {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ state: "verified", meal: meal }),
+            await api.patch(`/attendance/${id}`, {
+                state: "verified",
+                meal: meal
             });
-
-            if (!res.ok) throw new Error("Failed to verify record");
 
             setRecords(prev => prev.map(rec =>
                 (rec._id === id && rec.meal === meal) ? { ...rec, state: "verified" } : rec
@@ -145,17 +132,10 @@ const AttendanceStatus = () => {
 
     const handleStatusUpdate = async (id: string, meal: string, newStatus: string) => {
         try {
-            const token = localStorage.getItem("token");
-            const res = await fetch(`http://localhost:5000/api/attendance/${id}`, {
-                method: "PATCH",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${token}`,
-                },
-                body: JSON.stringify({ status: newStatus, meal: meal }),
+            await api.patch(`/attendance/${id}`, {
+                status: newStatus,
+                meal: meal
             });
-
-            if (!res.ok) throw new Error("Failed to update status");
 
             setRecords(prev => prev.map(rec =>
                 (rec._id === id && rec.meal === meal) ? { ...rec, status: newStatus as 'present' | 'absent' } : rec
@@ -177,13 +157,13 @@ const AttendanceStatus = () => {
     const generateReport = async () => {
         try {
             setLoadingReport(true);
-            const token = localStorage.getItem("token");
-            const res = await fetch(`http://localhost:5000/api/attendance/report/monthly?month=${reportMonth}&year=${reportYear}`, {
-                headers: { Authorization: `Bearer ${token}` },
+            const res = await api.get(`/attendance/report/monthly`, {
+                params: {
+                    month: reportMonth,
+                    year: reportYear
+                }
             });
-            if (!res.ok) throw new Error("Failed to fetch report");
-            const data = await res.json();
-            setReportData(data);
+            setReportData(res.data);
         } catch (error) {
             toast({
                 title: "Error",
