@@ -61,7 +61,6 @@ export function AppSidebar() {
 
   const managementItems = role === 'manager' ? [
     { title: "Mess Orders", url: "/admin/orders", icon: UtensilsCrossed },
-    { title: "Daily Attendance", url: "/attendance/entry", icon: Users },
     { title: "Attendance Status", url: "/attendance/status", icon: FileText },
     { title: "Menu", url: "/menu", icon: UtensilsCrossed },
     { title: "Announcements", url: "/announcements", icon: Megaphone },
