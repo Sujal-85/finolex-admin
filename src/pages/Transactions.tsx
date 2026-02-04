@@ -146,6 +146,27 @@ export default function Transactions() {
         }
     };
 
+    const handleReject = async (id: string, e?: React.MouseEvent) => {
+        if (e) e.stopPropagation();
+        try {
+            await api.patch(`/transactions/${id}`, { status: 'Failed' });
+            setTransactions(transactions.map(t =>
+                t._id === id ? { ...t, status: "Failed" as const } : t
+            ));
+            toast({
+                title: "Rejected",
+                description: "Transaction rejected.",
+            });
+        } catch (error: any) {
+            console.error("Rejection failed:", error);
+            toast({
+                title: "Rejection Failed",
+                description: "Failed to update transaction.",
+                variant: "destructive",
+            });
+        }
+    };
+
     const [isGenerating, setIsGenerating] = useState(false);
     const [emailAddress, setEmailAddress] = useState("");
     const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
@@ -383,19 +404,43 @@ export default function Transactions() {
                                             </TableCell>
                                             <TableCell>{format(new Date(t.date), "MMM dd HH:mm")}</TableCell>
                                             <TableCell>{getStatusBadge(t.status)}</TableCell>
-                                            <TableCell>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => {
-                                                        setSelectedTransaction(t);
-                                                        setGeneratedUrl(null); // Reset URL on new view
-                                                        setShowReceiptModal(true);
-                                                    }}
-                                                >
-                                                    <Eye className="h-4 w-4 mr-1" />
-                                                    View
-                                                </Button>
+                                            <TableCell className="text-right">
+                                                <div className="flex justify-end gap-2">
+                                                    {t.status === 'Pending' && (
+                                                        <>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0 text-green-600 border-green-200 hover:bg-green-50 hover:text-green-700 hover:border-green-300"
+                                                                onClick={(e) => handleApprove(t._id, e)}
+                                                                title="Approve"
+                                                            >
+                                                                <Check className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="h-8 w-8 p-0 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300"
+                                                                onClick={(e) => handleReject(t._id, e)}
+                                                                title="Reject"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
+                                                    )}
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedTransaction(t);
+                                                            setGeneratedUrl(null); // Reset URL on new view
+                                                            setShowReceiptModal(true);
+                                                        }}
+                                                    >
+                                                        <Eye className="h-4 w-4 mr-1" />
+                                                        View
+                                                    </Button>
+                                                </div>
                                             </TableCell>
                                         </TableRow>
                                     ))

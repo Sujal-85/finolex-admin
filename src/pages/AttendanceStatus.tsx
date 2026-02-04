@@ -67,7 +67,7 @@ interface MonthlyReportItem {
 const AttendanceStatus = () => {
     const [date, setDate] = useState<Date | undefined>(new Date());
     const [meal, setMeal] = useState<string>("all");
-    const [statusFilter, setStatusFilter] = useState<string>("all");
+    const [statusFilter, setStatusFilter] = useState<string>("present"); // Default to present as requested
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -82,7 +82,7 @@ const AttendanceStatus = () => {
 
     useEffect(() => {
         fetchAttendance();
-    }, [date, meal, statusFilter]);
+    }, [date, meal]); // Removed statusFilter dependency as it's now client-side
 
     const fetchAttendance = async () => {
         try {
@@ -91,7 +91,7 @@ const AttendanceStatus = () => {
             const params: any = {};
             if (date) params.date = format(date, 'yyyy-MM-dd');
             if (meal !== "all") params.meal = meal;
-            if (statusFilter !== "all") params.status = statusFilter;
+            // Removed status param to fetch all and filter client-side
 
             const res = await api.get('/attendance', { params });
             setRecords(res.data);
@@ -199,6 +199,11 @@ const AttendanceStatus = () => {
     }, {} as Record<string, { id: string, student: AttendanceRecord['student'], date: string, meals: Record<'breakfast' | 'lunch' | 'dinner', AttendanceRecord | null> }>);
 
     const consolidatedList = Object.values(groupedRecords)
+        .filter(row => {
+            if (statusFilter === 'all') return true;
+            // Include row if ANY meal matches the status filters
+            return Object.values(row.meals).some(m => m && m.status === statusFilter);
+        })
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     const verifiedCount = records.filter(r => r.state === 'verified').length;
@@ -289,7 +294,13 @@ const AttendanceStatus = () => {
 
                     <div className="flex gap-2 text-xs font-mono bg-slate-50 p-2 rounded-lg border border-slate-200 items-center">
                         <span className="text-green-600 px-2 border-r border-slate-300">{verifiedCount} Verified</span>
-                        <span className="text-orange-500 px-2">{pendingCount} Pending</span>
+                        <span className="text-orange-500 px-2 border-r border-slate-300">{pendingCount} Pending</span>
+                        <span className="text-blue-600 px-2 border-r border-slate-300">
+                            {records.filter(r => r.status === 'present').length} Present
+                        </span>
+                        <span className="text-red-500 px-2">
+                            {records.filter(r => r.status === 'absent').length} Absent
+                        </span>
                     </div>
                 </div>
             </div>

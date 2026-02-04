@@ -127,7 +127,8 @@ router.post('/', auth, async (req, res) => {
         await Notification.create({
             title: 'New Complaint Logged',
             message: `${complaint.subject} - ${complaint.priority} Priority`,
-            type: 'complaint'
+            type: 'complaint',
+            recipient: complaint.studentId
         });
 
         await logActivity({
