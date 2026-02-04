@@ -34,7 +34,8 @@ router.post('/', auth, async (req, res) => {
         await Notification.create({
             title: 'New Payment Received',
             message: `Received ₹${payment.amount} from ${payment.studentName}`,
-            type: 'payment'
+            type: 'payment',
+            recipient: payment.studentId
         });
 
         await logActivity({
@@ -56,17 +57,44 @@ router.post('/', auth, async (req, res) => {
             status: payment.status,
             method: payment.method,
             transactionId: payment.transactionId,
-            remarks: payment.remarks
+            remarks: payment.remarks,
+            balanceDeducted: true // Explicitly mark so transactionRoutes doesn't re-deduct
         });
 
         // Update Student Balance and Next Due Date if applicable
         const updateData = { $inc: { balance: -payment.amount } };
 
         if (payment.type === 'Meal Plan') {
-            const currentDueDate = await mongoose.model('Student').findById(payment.studentId).select('nextDueDate');
-            let newDate = currentDueDate?.nextDueDate ? new Date(currentDueDate.nextDueDate) : new Date();
-            newDate.setDate(newDate.getDate() + 30);
-            updateData.nextDueDate = newDate;
+            const student = await mongoose.model('Student').findById(payment.studentId);
+
+            // Handle Specific Plan Payment
+            if (req.body.targetPlanId && student.activePlans) {
+                const planIndex = student.activePlans.findIndex(p => p.planId.toString() === req.body.targetPlanId);
+
+                if (planIndex !== -1) {
+                    const plan = student.activePlans[planIndex];
+                    const currentPaid = plan.paidAmount || 0;
+                    const newPaid = currentPaid + payment.amount;
+
+                    // Update paid amount
+                    updateData[`activePlans.${planIndex}.paidAmount`] = newPaid;
+
+                    // Check if fully paid
+                    if (newPaid >= plan.price) {
+                        updateData[`activePlans.${planIndex}.status`] = 'paid';
+                        // Note: We don't remove it or change due date logic drastically here, 
+                        // but we might want to update nextDueDate if it was pending?
+                        // For now, simple status update.
+                    }
+                }
+            } else {
+                // Fallback Legacy Logic: If no specific plan targeted, extend generic due date?
+                // Keeping existing logic as fallback or auxiliary
+                const currentDueDate = student.nextDueDate;
+                let newDate = currentDueDate ? new Date(currentDueDate) : new Date();
+                newDate.setDate(newDate.getDate() + 30);
+                updateData.nextDueDate = newDate;
+            }
         }
 
         await mongoose.model('Student').findByIdAndUpdate(payment.studentId, updateData);

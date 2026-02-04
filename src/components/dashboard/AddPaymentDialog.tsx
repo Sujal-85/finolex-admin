@@ -27,6 +27,13 @@ interface Student {
     _id: string;
     name: string;
     rollNumber: string;
+    activePlans: {
+        planId: string;
+        name: string;
+        price: number;
+        status: 'paid' | 'pending';
+        paidAmount?: number;
+    }[];
 }
 
 interface AddPaymentDialogProps {
@@ -43,7 +50,8 @@ export function AddPaymentDialog({ open: controlledOpen, onOpenChange: setContro
     // Form State
     const [studentId, setStudentId] = useState("");
     const [amount, setAmount] = useState("");
-    const [type, setType] = useState("Meal Plan");
+    const [targetPlanId, setTargetPlanId] = useState("general"); // 'general' or planId
+    const [type, setType] = useState("Meal Plan"); // Derived or explicit
     const [method, setMethod] = useState("Cash");
     const [transactionId, setTransactionId] = useState("");
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
@@ -59,6 +67,9 @@ export function AddPaymentDialog({ open: controlledOpen, onOpenChange: setContro
             // Reset form on open
             setStudentId("");
             setAmount("");
+            setStudentId("");
+            setAmount("");
+            setTargetPlanId("general");
             setType("Meal Plan");
             setMethod("Cash");
             setTransactionId("");
@@ -105,12 +116,13 @@ export function AddPaymentDialog({ open: controlledOpen, onOpenChange: setContro
                 studentId,
                 studentName: selectedStudent.name,
                 amount: Number(amount),
-                type,
+                type: targetPlanId === 'general' ? type : 'Meal Plan',
                 method,
                 transactionId: method === 'Cash' ? undefined : transactionId,
                 date: new Date(date),
                 remarks,
-                status: 'Completed'
+                status: 'Completed',
+                targetPlanId: targetPlanId === 'general' ? undefined : targetPlanId
             };
 
             await api.post('/payments', payload);
@@ -192,18 +204,59 @@ export function AddPaymentDialog({ open: controlledOpen, onOpenChange: setContro
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="grid grid-cols-1 gap-2">
-                                <Label htmlFor="type">Payment Type *</Label>
-                                <Select value={type} onValueChange={setType}>
+                                <Label htmlFor="targetPlan">Payment For *</Label>
+                                <Select
+                                    value={targetPlanId}
+                                    onValueChange={(val) => {
+                                        setTargetPlanId(val);
+                                        if (val !== 'general') {
+                                            const student = students.find(s => s._id === studentId);
+                                            const plan = student?.activePlans?.find(p => p.planId === val);
+                                            if (plan) {
+                                                const paid = plan.paidAmount || 0;
+                                                const remaining = plan.price - paid;
+                                                setAmount(remaining.toString());
+                                                setType("Meal Plan");
+                                            }
+                                        } else {
+                                            setAmount("");
+                                            setType("Top-up");
+                                        }
+                                    }}
+                                >
                                     <SelectTrigger>
-                                        <SelectValue placeholder="Select type" />
+                                        <SelectValue placeholder="Select purpose" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="Meal Plan">Meal Plan</SelectItem>
-                                        <SelectItem value="Top-up">Top-up</SelectItem>
-                                        <SelectItem value="Fine">Fine</SelectItem>
+                                        <SelectItem value="general">General Credit (Top-up)</SelectItem>
+                                        {students.find(s => s._id === studentId)?.activePlans?.filter(p => p.status === 'pending').map(plan => {
+                                            const paid = plan.paidAmount || 0;
+                                            const remaining = plan.price - paid;
+                                            return (
+                                                <SelectItem key={plan.planId} value={plan.planId}>
+                                                    Plan: {plan.name} (Due: ₹{remaining})
+                                                </SelectItem>
+                                            );
+                                        })}
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {targetPlanId === 'general' && (
+                                <div className="grid grid-cols-1 gap-2">
+                                    <Label htmlFor="type">Payment Type *</Label>
+                                    <Select value={type} onValueChange={setType}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select type" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="Meal Plan">Meal Plan</SelectItem>
+                                            <SelectItem value="Top-up">Top-up</SelectItem>
+                                            <SelectItem value="Fine">Fine</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
 
                             <div className="grid grid-cols-1 gap-2">
                                 <Label htmlFor="method">Method *</Label>

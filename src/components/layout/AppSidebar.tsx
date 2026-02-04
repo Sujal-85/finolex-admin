@@ -55,6 +55,8 @@ export function AppSidebar() {
     { title: "Plans & Pricing", url: "/plans", icon: Tag },
   ] : [
     { title: "Dashboard", url: "/admin/dashboard", icon: LayoutDashboard },
+    { title: "Attendance", url: "/attendance/status", icon: FileText },
+    { title: "Complaints", url: "/complaints", icon: MessageSquare },
     { title: "Mess Orders", url: "/admin/orders", icon: UtensilsCrossed },
     { title: "Settlement", url: "/settlement", icon: CreditCard },
   ];

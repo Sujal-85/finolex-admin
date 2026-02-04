@@ -24,6 +24,7 @@ const studentSchema = new mongoose.Schema({
         startDate: { type: Date },
         endDate: { type: Date },
         status: { type: String, enum: ['paid', 'pending'], default: 'pending' },
+        paidAmount: { type: Number, default: 0 },
         addedAt: { type: Date, default: Date.now },
         _id: false
     }],
