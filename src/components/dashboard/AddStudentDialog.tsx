@@ -61,6 +61,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
     const [roomNo, setRoomNo] = useState("");
     const [hostelName, setHostelName] = useState("");
     const [plan, setPlan] = useState("Basic Mess Plan");
+    const [year, setYear] = useState("First");
     const [profileImage, setProfileImage] = useState("");
     const [balance, setBalance] = useState("0");
 
@@ -75,7 +76,9 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
             // @ts-ignore
             setRoomNo(studentToEdit.hostelDetails?.roomNo || "");
             // @ts-ignore
+            // @ts-ignore
             setHostelName(studentToEdit.hostelDetails?.hostelName || "");
+            setYear(studentToEdit.year || "First");
             // @ts-ignore
             setPlan(studentToEdit.currentPlan || "Basic Mess Plan");
             setProfileImage(studentToEdit.profileImage || "");
@@ -89,6 +92,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                 setPhone("");
                 setRoomNo("");
                 setHostelName("");
+                setYear("First");
                 setPlan("Basic Mess Plan");
                 setProfileImage("");
                 setBalance("0");
@@ -105,7 +109,7 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
             dob,
             email,
             phone,
-            year: 'First',
+            year,
             hostelDetails: {
                 hostelName: hostelName || 'Boys Hostel 1',
                 roomNo
@@ -236,6 +240,20 @@ export function AddStudentDialog({ open: controlledOpen, onOpenChange: setContro
                                     placeholder="A-101"
                                 />
                             </div>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            <Label htmlFor="year">Year</Label>
+                            <Select value={year} onValueChange={setYear}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select Year" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="First">First Year</SelectItem>
+                                    <SelectItem value="Second">Second Year</SelectItem>
+                                    <SelectItem value="Third">Third Year</SelectItem>
+                                    <SelectItem value="Fourth">Fourth Year</SelectItem>
+                                </SelectContent>
+                            </Select>
                         </div>
                         <div className="grid grid-cols-1 gap-2">
                             <Label htmlFor="plan">Mess Plan</Label>

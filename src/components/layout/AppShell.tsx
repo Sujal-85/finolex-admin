@@ -10,7 +10,7 @@ export function AppShell() {
         <AppSidebar />
         <div className="flex flex-1 flex-col h-full overflow-hidden">
           <TopNavbar />
-          <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+          <main className="flex-1 p-4 md:p-6 overflow-y-auto pb-24">
             <Outlet />
           </main>
         </div>

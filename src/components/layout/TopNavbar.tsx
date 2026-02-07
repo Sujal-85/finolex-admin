@@ -263,11 +263,18 @@ export function TopNavbar() {
                 Refresh Data
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuLabel>Quick Add</DropdownMenuLabel>
-              <DropdownMenuItem onClick={() => setActiveDialog("student")}>Add Student</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setActiveDialog("payment")}>Record Payment</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setActiveDialog("announcement")}>Create Announcement</DropdownMenuItem>
-              <DropdownMenuSeparator />
+
+              {/* Only show Quick Add for Managers */}
+              {(localStorage.getItem('user') && JSON.parse(localStorage.getItem('user') || '{}').role === 'manager') && (
+                <>
+                  <DropdownMenuLabel>Quick Add</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => setActiveDialog("student")}>Add Student</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveDialog("payment")}>Record Payment</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setActiveDialog("announcement")}>Create Announcement</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                </>
+              )}
+
               <DropdownMenuItem onClick={() => navigate("/profile")}>
                 <User className="mr-2 h-4 w-4" /> Profile
               </DropdownMenuItem>

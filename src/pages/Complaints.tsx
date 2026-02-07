@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -50,6 +50,17 @@ export default function Complaints() {
   const [assignTo, setAssignTo] = useState("");
   const [isLoading, setIsLoading] = useState(true); // Add isLoading state
 
+  // Passcode State
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [passcode, setPasscode] = useState("");
+
+  useEffect(() => {
+    const unlocked = sessionStorage.getItem("complaints_unlocked");
+    if (unlocked === "true") {
+      setIsUnlocked(true);
+    }
+  }, []);
+
   useEffect(() => {
     fetchComplaints();
     // Poll for updates every 5 seconds
@@ -80,6 +91,50 @@ export default function Complaints() {
   };
 
 
+
+  const handleUnlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passcode === "942085") {
+      setIsUnlocked(true);
+      sessionStorage.setItem("complaints_unlocked", "true");
+      toast({
+        title: "Access Granted",
+        description: "Welcome to Complaints.",
+      });
+    } else {
+      toast({
+        title: "Access Denied",
+        description: "Incorrect passcode.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  if (!isUnlocked) {
+    return (
+      <div className="flex items-center justify-center h-[80vh]">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>Restricted Access</CardTitle>
+            <CardDescription>Enter passcode to view complaints</CardDescription>
+          </CardHeader>
+          <form onSubmit={handleUnlock}>
+            <CardContent>
+              <Input
+                type="password"
+                placeholder="Enter Passcode"
+                value={passcode}
+                onChange={(e) => setPasscode(e.target.value)}
+              />
+            </CardContent>
+            <CardFooter>
+              <Button type="submit" className="w-full">Unlock</Button>
+            </CardFooter>
+          </form>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <Loader />;
