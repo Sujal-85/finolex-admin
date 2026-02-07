@@ -32,8 +32,9 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -79,6 +80,17 @@ const AttendanceStatus = () => {
     const [loadingReport, setLoadingReport] = useState(false);
 
     const { toast } = useToast();
+
+    // Passcode State
+    const [isUnlocked, setIsUnlocked] = useState(false);
+    const [passcode, setPasscode] = useState("");
+
+    useEffect(() => {
+        const unlocked = sessionStorage.getItem("attendance_unlocked");
+        if (unlocked === "true") {
+            setIsUnlocked(true);
+        }
+    }, []);
 
     useEffect(() => {
         fetchAttendance();
@@ -209,6 +221,50 @@ const AttendanceStatus = () => {
     const verifiedCount = records.filter(r => r.state === 'verified').length;
     const pendingCount = records.filter(r => r.state === 'pending').length;
 
+    const handleUnlock = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (passcode === "942085") {
+            setIsUnlocked(true);
+            sessionStorage.setItem("attendance_unlocked", "true");
+            toast({
+                title: "Access Granted",
+                description: "Welcome to Attendance Logs.",
+            });
+        } else {
+            toast({
+                title: "Access Denied",
+                description: "Incorrect passcode.",
+                variant: "destructive"
+            });
+        }
+    };
+
+    if (!isUnlocked) {
+        return (
+            <div className="flex items-center justify-center h-[80vh]">
+                <Card className="w-full max-w-md">
+                    <CardHeader>
+                        <CardTitle>Restricted Access</CardTitle>
+                        <CardDescription>Enter passcode to view attendance</CardDescription>
+                    </CardHeader>
+                    <form onSubmit={handleUnlock}>
+                        <CardContent>
+                            <Input
+                                type="password"
+                                placeholder="Enter Passcode"
+                                value={passcode}
+                                onChange={(e) => setPasscode(e.target.value)}
+                            />
+                        </CardContent>
+                        <CardFooter>
+                            <Button type="submit" className="w-full">Unlock</Button>
+                        </CardFooter>
+                    </form>
+                </Card>
+            </div>
+        );
+    }
+
     return (
         <div className="space-y-8 p-1">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
@@ -292,13 +348,13 @@ const AttendanceStatus = () => {
                         </DialogContent>
                     </Dialog>
 
-                    <div className="flex gap-2 text-xs font-mono bg-slate-50 p-2 rounded-lg border border-slate-200 items-center">
-                        <span className="text-green-600 px-2 border-r border-slate-300">{verifiedCount} Verified</span>
-                        <span className="text-orange-500 px-2 border-r border-slate-300">{pendingCount} Pending</span>
-                        <span className="text-blue-600 px-2 border-r border-slate-300">
+                    <div className="grid grid-cols-2 sm:flex sm:flex-wrap gap-2 text-xs font-mono bg-slate-50 p-2 rounded-lg border border-slate-200 items-center w-full sm:w-auto">
+                        <span className="text-green-600 px-2 border-r border-slate-300 flex justify-center sm:justify-start">{verifiedCount} Verified</span>
+                        <span className="text-orange-500 px-2 sm:border-r border-none border-slate-300 flex justify-center sm:justify-start">{pendingCount} Pending</span>
+                        <span className="text-blue-600 px-2 border-r border-slate-300 flex justify-center sm:justify-start">
                             {records.filter(r => r.status === 'present').length} Present
                         </span>
-                        <span className="text-red-500 px-2">
+                        <span className="text-red-500 px-2 flex justify-center sm:justify-start">
                             {records.filter(r => r.status === 'absent').length} Absent
                         </span>
                     </div>
@@ -309,14 +365,14 @@ const AttendanceStatus = () => {
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-purple-500 to-blue-500 opacity-80" />
                 <CardContent className="p-6">
                     <div className="flex flex-col md:flex-row gap-4 items-center">
-                        <div className="flex gap-2 items-center flex-1 w-full">
-                            <Filter className="h-4 w-4 text-slate-400" />
+                        <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center flex-1 w-full">
+                            <div className="hidden sm:block"><Filter className="h-4 w-4 text-slate-400" /></div>
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
                                         variant={"outline"}
                                         className={cn(
-                                            "w-[200px] justify-start text-left font-normal bg-white border-slate-300 text-slate-900 hover:bg-slate-50",
+                                            "w-full sm:w-[200px] justify-start text-left font-normal bg-white border-slate-300 text-slate-900 hover:bg-slate-50",
                                             !date && "text-muted-foreground"
                                         )}
                                     >
@@ -338,7 +394,7 @@ const AttendanceStatus = () => {
                             </Popover>
 
                             <Select value={meal} onValueChange={setMeal}>
-                                <SelectTrigger className="w-[150px] bg-white border-slate-300 text-slate-900"><SelectValue placeholder="All Meals" /></SelectTrigger>
+                                <SelectTrigger className="w-full sm:w-[150px] bg-white border-slate-300 text-slate-900"><SelectValue placeholder="All Meals" /></SelectTrigger>
                                 <SelectContent className="bg-white border-slate-200 text-slate-900">
                                     <SelectItem value="all">All Meals</SelectItem>
                                     <SelectItem value="Breakfast">Breakfast</SelectItem>
@@ -348,7 +404,7 @@ const AttendanceStatus = () => {
                             </Select>
 
                             <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                <SelectTrigger className="w-[150px] bg-white border-slate-300 text-slate-900"><SelectValue placeholder="All Status" /></SelectTrigger>
+                                <SelectTrigger className="w-full sm:w-[150px] bg-white border-slate-300 text-slate-900"><SelectValue placeholder="All Status" /></SelectTrigger>
                                 <SelectContent className="bg-white border-slate-200 text-slate-900">
                                     <SelectItem value="all">All Status</SelectItem>
                                     <SelectItem value="present">Present</SelectItem>
@@ -367,53 +423,36 @@ const AttendanceStatus = () => {
                             <Loader2 className="h-10 w-10 animate-spin text-purple-600" />
                         </div>
                     ) : (
-                        <div className="overflow-x-auto">
-                            <Table>
-                                <TableHeader className="bg-slate-50">
-                                    <TableRow className="border-slate-200 hover:bg-slate-100/50">
-                                        <TableHead className="text-slate-500 pl-6">Date</TableHead>
-                                        <TableHead className="text-slate-500">Student</TableHead>
-                                        <TableHead className="text-center text-slate-500">Breakfast</TableHead>
-                                        <TableHead className="text-center text-slate-500">Lunch</TableHead>
-                                        <TableHead className="text-center text-slate-500">Dinner</TableHead>
-                                    </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {consolidatedList.length === 0 ? (
-                                        <TableRow>
-                                            <TableCell colSpan={5} className="text-center h-48 text-slate-500">
-                                                No records found. Try adjusting filters.
-                                            </TableCell>
-                                        </TableRow>
-                                    ) : (
-                                        consolidatedList.map((row) => (
-                                            <TableRow key={`${row.id}-${row.date}`} className="border-slate-100 hover:bg-slate-50 transition-colors">
-                                                <TableCell className="pl-6">
-                                                    <span className="text-slate-900 font-medium">{format(new Date(row.date), 'MMM dd, yyyy')}</span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
-                                                            {row.student?.name?.charAt(0)}
-                                                        </div>
-                                                        <div>
-                                                            <div className="text-slate-900 font-medium">{row.student?.name || 'Unknown'}</div>
-                                                            <div className="text-xs text-slate-500">{row.student?.rollNo}</div>
-                                                        </div>
+                        <>
+                            {/* Mobile View */}
+                            <div className="md:hidden space-y-4">
+                                {consolidatedList.length === 0 ? (
+                                    <div className="text-center py-10 text-slate-500">
+                                        No records found.
+                                    </div>
+                                ) : (
+                                    consolidatedList.map((row) => (
+                                        <Card key={`${row.id}-${row.date}`} className="bg-white border-slate-200 shadow-sm">
+                                            <CardHeader className="p-4 pb-2 border-b border-slate-100">
+                                                <div className="flex justify-between items-start">
+                                                    <div>
+                                                        <div className="font-medium text-slate-900">{row.student?.name || 'Unknown'}</div>
+                                                        <div className="text-xs text-slate-500">{row.student?.rollNo}</div>
                                                     </div>
-                                                </TableCell>
-
-                                                {/* Meal Columns */}
+                                                    <div className="text-xs font-medium text-slate-500 bg-slate-50 px-2 py-1 rounded">
+                                                        {format(new Date(row.date), 'MMM dd')}
+                                                    </div>
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent className="p-4 grid gap-3">
                                                 {['breakfast', 'lunch', 'dinner'].map((m) => {
                                                     const mRec = row.meals[m as 'breakfast' | 'lunch' | 'dinner'];
-
-                                                    if (!mRec) {
-                                                        return <TableCell key={m} className="text-center"><span className="text-slate-300">-</span></TableCell>;
-                                                    }
+                                                    if (!mRec) return null;
 
                                                     return (
-                                                        <TableCell key={m} className="text-center">
-                                                            <div className="flex flex-col items-center gap-1">
+                                                        <div key={m} className="flex items-center justify-between">
+                                                            <span className="text-sm font-medium capitalize text-slate-600 w-20">{m}</span>
+                                                            <div className="flex items-center gap-2 flex-1 justify-end">
                                                                 <Badge
                                                                     variant="outline"
                                                                     onClick={() => handleStatusUpdate(mRec._id, mRec.meal, mRec.status === 'present' ? 'absent' : 'present')}
@@ -428,29 +467,115 @@ const AttendanceStatus = () => {
                                                                 </Badge>
 
                                                                 {mRec.state === 'verified' ? (
-                                                                    <div className="flex items-center text-emerald-600 text-[10px] gap-0.5">
-                                                                        <CheckCircle className="h-3 w-3" />
+                                                                    <div className="flex items-center text-emerald-600 text-[10px] gap-0.5 w-16 justify-center">
+                                                                        <CheckCircle className="h-4 w-4" />
+                                                                        <span>Verified</span>
                                                                     </div>
                                                                 ) : (
                                                                     <Button
                                                                         size="sm"
                                                                         variant="ghost"
                                                                         onClick={() => handleVerify(mRec._id, mRec.meal)}
-                                                                        className="h-5 text-[10px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2"
+                                                                        className="h-6 text-[10px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2 w-16"
                                                                     >
                                                                         Verify
                                                                     </Button>
                                                                 )}
                                                             </div>
-                                                        </TableCell>
+                                                        </div>
                                                     );
                                                 })}
+                                            </CardContent>
+                                        </Card>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="hidden md:block overflow-x-auto">
+                                <Table>
+                                    <TableHeader className="bg-slate-50">
+                                        <TableRow className="border-slate-200 hover:bg-slate-100/50">
+                                            <TableHead className="text-slate-500 pl-6">Date</TableHead>
+                                            <TableHead className="text-slate-500">Student</TableHead>
+                                            <TableHead className="text-center text-slate-500">Breakfast</TableHead>
+                                            <TableHead className="text-center text-slate-500">Lunch</TableHead>
+                                            <TableHead className="text-center text-slate-500">Dinner</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {consolidatedList.length === 0 ? (
+                                            <TableRow>
+                                                <TableCell colSpan={5} className="text-center h-48 text-slate-500">
+                                                    No records found. Try adjusting filters.
+                                                </TableCell>
                                             </TableRow>
-                                        ))
-                                    )}
-                                </TableBody>
-                            </Table>
-                        </div>
+                                        ) : (
+                                            consolidatedList.map((row) => (
+                                                <TableRow key={`${row.id}-${row.date}`} className="border-slate-100 hover:bg-slate-50 transition-colors">
+                                                    <TableCell className="pl-6">
+                                                        <span className="text-slate-900 font-medium">{format(new Date(row.date), 'MMM dd, yyyy')}</span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="h-8 w-8 rounded-full bg-slate-100 flex items-center justify-center text-xs font-bold text-slate-600">
+                                                                {row.student?.name?.charAt(0)}
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-slate-900 font-medium">{row.student?.name || 'Unknown'}</div>
+                                                                <div className="text-xs text-slate-500">{row.student?.rollNo}</div>
+                                                            </div>
+                                                        </div>
+                                                    </TableCell>
+
+                                                    {/* Meal Columns */}
+                                                    {['breakfast', 'lunch', 'dinner'].map((m) => {
+                                                        const mRec = row.meals[m as 'breakfast' | 'lunch' | 'dinner'];
+
+                                                        if (!mRec) {
+                                                            return <TableCell key={m} className="text-center"><span className="text-slate-300">-</span></TableCell>;
+                                                        }
+
+                                                        return (
+                                                            <TableCell key={m} className="text-center">
+                                                                <div className="flex flex-col items-center gap-1">
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        onClick={() => handleStatusUpdate(mRec._id, mRec.meal, mRec.status === 'present' ? 'absent' : 'present')}
+                                                                        className={cn(
+                                                                            "border-0 px-2 py-0.5 text-[10px] cursor-pointer hover:opacity-80 transition-opacity active:scale-95 select-none w-16 justify-center",
+                                                                            mRec.status === 'present'
+                                                                                ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                                                                : "bg-red-100 text-red-700 hover:bg-red-200"
+                                                                        )}
+                                                                    >
+                                                                        {mRec.status.toUpperCase()}
+                                                                    </Badge>
+
+                                                                    {mRec.state === 'verified' ? (
+                                                                        <div className="flex items-center text-emerald-600 text-[10px] gap-0.5">
+                                                                            <CheckCircle className="h-3 w-3" />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <Button
+                                                                            size="sm"
+                                                                            variant="ghost"
+                                                                            onClick={() => handleVerify(mRec._id, mRec.meal)}
+                                                                            className="h-5 text-[10px] text-blue-600 hover:text-blue-700 hover:bg-blue-50 px-2"
+                                                                        >
+                                                                            Verify
+                                                                        </Button>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                        );
+                                                    })}
+                                                </TableRow>
+                                            ))
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        </>
                     )}
                 </CardContent>
             </Card>

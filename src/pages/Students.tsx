@@ -48,6 +48,8 @@ interface Student {
   name: string;
   email: string;
   dob?: string;
+  rollNo?: string;
+  department?: string;
   year: string;
   hostelDetails: {
     hostelName: string;
@@ -217,16 +219,32 @@ export default function Students() {
       doc.text(`Report Generated: ${format(new Date(), "PPP p")}`, margin, 48);
 
       // --- Content ---
-      const groupedByPlan: Record<string, Student[]> = {};
-      studentsWithDues.forEach(student => {
-        const plan = student.currentPlan || "No Active Plan";
-        if (!groupedByPlan[plan]) groupedByPlan[plan] = [];
-        groupedByPlan[plan].push(student);
+      // --- Content ---
+      // Group by Year instead of Plan
+      const groupedByYear: Record<string, Student[]> = {};
+
+      // Sort students by year for better grouping
+      studentsWithDues.sort((a, b) => {
+        const yearOrder: Record<string, number> = { 'First': 1, 'Second': 2, 'Third': 3, 'Fourth': 4 };
+        return (yearOrder[a.year] || 99) - (yearOrder[b.year] || 99);
       });
 
-      let currentY = 55;
+      studentsWithDues.forEach(student => {
+        const year = student.year ? `${student.year} Year` : "Unknown Year";
+        if (!groupedByYear[year]) groupedByYear[year] = [];
+        groupedByYear[year].push(student);
+      });
 
-      Object.entries(groupedByPlan).forEach(([planName, planStudents]) => {
+      // Add Total Count Header
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(0);
+      doc.text(`Total Unpaid Students: ${studentsWithDues.length}`, margin, 53);
+      doc.text(`Total Outstanding Amount: Rs. ${studentsWithDues.reduce((sum, s) => sum + s.balance, 0).toLocaleString()}`, margin, 60);
+
+      let currentY = 70;
+
+      Object.entries(groupedByYear).forEach(([yearName, yearStudents]) => {
         if (currentY > 240) {
           doc.addPage();
           currentY = 20;
@@ -235,15 +253,18 @@ export default function Students() {
         doc.setFontSize(12);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(0);
-        doc.text(`Plan: ${planName}`, margin, currentY);
+        doc.setFillColor(240, 240, 240);
+        doc.rect(margin, currentY - 5, pageWidth - (margin * 2), 8, 'F');
+        doc.text(`${yearName} (${yearStudents.length})`, margin + 2, currentY);
         currentY += 5;
 
         autoTable(doc, {
           startY: currentY,
-          head: [['Name', 'Year', 'Hostel', 'Phone', 'Balance']],
-          body: planStudents.map(s => [
+          head: [['Name', 'Roll No', 'Dept', 'Hostel', 'Phone', 'Balance']],
+          body: yearStudents.map(s => [
             s.name,
-            s.year,
+            s.rollNo || '-',
+            s.department || '-',
             `${s.hostelDetails?.hostelName || '-'} (${s.hostelDetails?.roomNo || '-'})`,
             s.phone || '-',
             `Rs. ${s.balance.toLocaleString()}`
@@ -251,7 +272,15 @@ export default function Students() {
           margin: { left: margin, right: margin },
           theme: 'grid',
           headStyles: { fillColor: [41, 128, 185], textColor: 255 },
-          styles: { fontSize: 9 },
+          styles: { fontSize: 8, cellPadding: 1.5 },
+          columnStyles: {
+            0: { cellWidth: 40 }, // Name
+            1: { cellWidth: 20 }, // Roll No
+            2: { cellWidth: 25 }, // Dept
+            3: { cellWidth: 40 }, // Hostel
+            4: { cellWidth: 25 }, // Phone
+            5: { cellWidth: 25, halign: 'right' }, // Balance
+          },
           didDrawPage: (data) => {
             currentY = data.cursor?.y || currentY;
           }
